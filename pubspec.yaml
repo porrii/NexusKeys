@@ -52,6 +52,7 @@ dependencies:
   get_it: ^9.2.1
   flutter_riverpod: ^2.6.1
   equatable: ^2.1.0
+  cryptography_flutter: ^2.3.4
 
 dev_dependencies:
   flutter_test:
