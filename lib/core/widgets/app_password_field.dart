@@ -10,12 +10,17 @@ class AppPasswordField extends StatefulWidget {
     super.key,
     this.autofocus = false,
     this.onSubmitted,
+    this.trailing,
   });
 
   final TextEditingController controller;
   final String hintText;
   final bool autofocus;
   final ValueChanged<String>? onSubmitted;
+
+  /// An extra action shown before the visibility toggle — e.g. the inline
+  /// "generate a password" button in the new/edit item form.
+  final Widget? trailing;
 
   @override
   State<AppPasswordField> createState() => _AppPasswordFieldState();
@@ -34,9 +39,15 @@ class _AppPasswordFieldState extends State<AppPasswordField> {
       onSubmitted: widget.onSubmitted,
       decoration: InputDecoration(
         hintText: widget.hintText,
-        suffixIcon: IconButton(
-          icon: Icon(_obscured ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-          onPressed: () => setState(() => _obscured = !_obscured),
+        suffixIcon: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (widget.trailing != null) widget.trailing!,
+            IconButton(
+              icon: Icon(_obscured ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+              onPressed: () => setState(() => _obscured = !_obscured),
+            ),
+          ],
         ),
       ),
     );

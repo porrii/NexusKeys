@@ -1,27 +1,47 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/widgets/app_password_field.dart';
 import '../../domain/entities/vault_item.dart';
 import '../../domain/entities/vault_item_type.dart';
 
-/// Create/edit form for a vault item.
-///
-/// No reference mockup covers this exact state either way — img/05_new_item.png
-/// is its own later module with per-type fields — so this deliberately stays
-/// generic (the fields every item type shares) rather than guessing at a
-/// design. It exists now so step 9's CRUD is actually reachable from the UI,
-/// not just exercised by repository tests.
+/// A quick, sensible-defaults password: 16 characters spanning every
+/// character class, drawn from a CSPRNG. The Generator module
+/// (img/06_generator.png) adds the real configurable version — length,
+/// character-set toggles, pronounceable mode, entropy/strength display;
+/// this inline button exists only so "Generar contraseña" in
+/// img/05_new_item.png does something reasonable in the meantime.
+String _generateQuickPassword() {
+  const lower = 'abcdefghijklmnopqrstuvwxyz';
+  const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const digits = '0123456789';
+  const symbols = '!@#\$%^&*()-_=+?';
+  const all = lower + upper + digits + symbols;
+
+  final random = Random.secure();
+  final chars = [
+    lower[random.nextInt(lower.length)],
+    upper[random.nextInt(upper.length)],
+    digits[random.nextInt(digits.length)],
+    symbols[random.nextInt(symbols.length)],
+    for (var i = 0; i < 12; i++) all[random.nextInt(all.length)],
+  ]..shuffle(random);
+  return chars.join();
+}
+
+/// Create/edit form for a vault item — reproduces img/05_new_item.png for
+/// creation; there's no separate mockup for editing, so it reuses the same
+/// layout pre-filled, titled "Editar elemento". Deletion isn't reachable
+/// from here — img/04_item_details.png's "Eliminar" button is the only
+/// place that lives.
 class EditVaultItemPage extends StatefulWidget {
-  const EditVaultItemPage({super.key, this.existingItem, this.onSave, this.onDelete});
+  const EditVaultItemPage({super.key, this.existingItem, this.onSave});
 
   /// Null when creating a new item; the item being edited otherwise.
   final VaultItem? existingItem;
 
   final ValueChanged<VaultItem>? onSave;
-
-  /// Only ever called when [existingItem] is non-null — there's nothing to
-  /// delete while creating a new item.
-  final VoidCallback? onDelete;
 
   @override
   State<EditVaultItemPage> createState() => _EditVaultItemPageState();
@@ -34,7 +54,7 @@ class _EditVaultItemPageState extends State<EditVaultItemPage> {
   late final TextEditingController _password;
   late final TextEditingController _url;
   late final TextEditingController _notes;
-  late final TextEditingController _category;
+  late final TextEditingController _folder;
   late final TextEditingController _tags;
   late bool _isFavorite;
   String? _titleError;
@@ -51,7 +71,7 @@ class _EditVaultItemPageState extends State<EditVaultItemPage> {
     _password = TextEditingController(text: item?.password ?? '');
     _url = TextEditingController(text: item?.url ?? '');
     _notes = TextEditingController(text: item?.notes ?? '');
-    _category = TextEditingController(text: item?.category ?? '');
+    _folder = TextEditingController(text: item?.category ?? '');
     _tags = TextEditingController(text: item?.tags.join(', ') ?? '');
     _isFavorite = item?.isFavorite ?? false;
   }
@@ -63,7 +83,7 @@ class _EditVaultItemPageState extends State<EditVaultItemPage> {
     _password.dispose();
     _url.dispose();
     _notes.dispose();
-    _category.dispose();
+    _folder.dispose();
     _tags.dispose();
     super.dispose();
   }
@@ -87,7 +107,7 @@ class _EditVaultItemPageState extends State<EditVaultItemPage> {
       password: _password.text.isEmpty ? null : _password.text,
       url: _url.text.trim().isEmpty ? null : _url.text.trim(),
       notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
-      category: _category.text.trim().isEmpty ? null : _category.text.trim(),
+      category: _folder.text.trim().isEmpty ? null : _folder.text.trim(),
       tags: tags,
       color: existing?.color,
       icon: existing?.icon,
@@ -97,25 +117,7 @@ class _EditVaultItemPageState extends State<EditVaultItemPage> {
     );
 
     widget.onSave?.call(item);
-    Navigator.of(context).pop();
-  }
-
-  Future<void> _confirmDelete() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('¿Eliminar este elemento?'),
-        content: const Text('Se moverá a la papelera.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancelar')),
-          TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Eliminar')),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    widget.onDelete?.call();
-    if (!mounted) return;
-    Navigator.of(context).pop();
+    Navigator.of(context).pop(item);
   }
 
   @override
@@ -124,8 +126,6 @@ class _EditVaultItemPageState extends State<EditVaultItemPage> {
       appBar: AppBar(
         title: Text(_isEditing ? 'Editar elemento' : 'Nuevo elemento'),
         actions: [
-          if (_isEditing)
-            IconButton(icon: const Icon(Icons.delete_outline), onPressed: _confirmDelete),
           IconButton(icon: const Icon(Icons.check), onPressed: _submit),
         ],
       ),
@@ -146,7 +146,11 @@ class _EditVaultItemPageState extends State<EditVaultItemPage> {
             TextField(
               controller: _title,
               autofocus: !_isEditing,
-              decoration: InputDecoration(labelText: 'Título', errorText: _titleError),
+              decoration: InputDecoration(
+                labelText: 'Título',
+                hintText: 'Ej. Spotify',
+                errorText: _titleError,
+              ),
               onChanged: (_) {
                 if (_titleError != null) setState(() => _titleError = null);
               },
@@ -154,29 +158,40 @@ class _EditVaultItemPageState extends State<EditVaultItemPage> {
             const SizedBox(height: 16),
             TextField(
               controller: _username,
-              decoration: const InputDecoration(labelText: 'Usuario'),
+              decoration: const InputDecoration(labelText: 'Usuario', hintText: 'Ej. usuario@email.com'),
             ),
             const SizedBox(height: 16),
-            AppPasswordField(controller: _password, hintText: 'Contraseña'),
+            AppPasswordField(
+              controller: _password,
+              hintText: 'Generar contraseña',
+              trailing: IconButton(
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Generar contraseña',
+                onPressed: () => setState(() => _password.text = _generateQuickPassword()),
+              ),
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: _url,
-              decoration: const InputDecoration(labelText: 'Sitio web'),
+              decoration: const InputDecoration(labelText: 'Sitio web', hintText: 'https://ejemplo.com'),
             ),
             const SizedBox(height: 16),
             TextField(
-              controller: _category,
-              decoration: const InputDecoration(labelText: 'Categoría'),
+              controller: _folder,
+              decoration: const InputDecoration(labelText: 'Carpeta', hintText: 'Sin carpeta'),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _tags,
-              decoration: const InputDecoration(labelText: 'Etiquetas (separadas por comas)'),
+              decoration: const InputDecoration(
+                labelText: 'Etiquetas',
+                hintText: 'Seleccionar etiquetas',
+              ),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _notes,
-              decoration: const InputDecoration(labelText: 'Notas'),
+              decoration: const InputDecoration(labelText: 'Notas', hintText: 'Notas adicionales'),
               maxLines: 4,
             ),
             const SizedBox(height: 8),

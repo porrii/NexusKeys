@@ -6,6 +6,7 @@ import '../../domain/entities/vault_item.dart';
 import '../../domain/repositories/vault_repository.dart';
 import '../widgets/vault_item_tile.dart';
 import 'edit_vault_item_page.dart';
+import 'item_details_page.dart';
 
 enum _VaultFilter { all, favorites, recent }
 
@@ -51,14 +52,29 @@ class _VaultPageState extends State<VaultPage> {
     );
   }
 
-  void _openEditItem(VaultItem item) {
+  void _openItemDetails(VaultItem item) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => EditVaultItemPage(
-          existingItem: item,
-          onSave: _repository.update,
-          onDelete: () => _deleteWithUndo(item),
+        builder: (_) => ItemDetailsPage(
+          item: item,
+          onToggleFavorite: (value) {
+            final id = item.id;
+            if (id != null) _repository.setFavorite(id, value);
+          },
+          onEdit: () => _openEditAndReturn(item),
+          onDelete: () {
+            _deleteWithUndo(item);
+            Navigator.of(context).pop();
+          },
         ),
+      ),
+    );
+  }
+
+  Future<VaultItem?> _openEditAndReturn(VaultItem item) {
+    return Navigator.of(context).push<VaultItem>(
+      MaterialPageRoute(
+        builder: (_) => EditVaultItemPage(existingItem: item, onSave: _repository.update),
       ),
     );
   }
@@ -165,7 +181,7 @@ class _VaultPageState extends State<VaultPage> {
                       subtitle: item.username ?? item.url ?? item.category ?? '',
                       avatarColor: item.type.color,
                       isFavorite: item.isFavorite,
-                      onTap: () => _openEditItem(item),
+                      onTap: () => _openItemDetails(item),
                     );
                   },
                 );

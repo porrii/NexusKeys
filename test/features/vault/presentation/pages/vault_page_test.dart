@@ -179,7 +179,7 @@ void main() {
     expect(find.text('ProtonMail'), findsOneWidget);
   });
 
-  testWidgets('tapping an item opens the edit form pre-filled with its data', (tester) async {
+  testWidgets('tapping an item opens its read-only details (img/04_item_details.png)', (tester) async {
     fakeRepository.seed([item(title: 'GitHub', username: 'ivan_dev')]);
 
     await tester.pumpWidget(wrap(const VaultPage()));
@@ -187,8 +187,27 @@ void main() {
     await tester.tap(find.text('GitHub'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Editar elemento'), findsOneWidget);
-    expect(find.widgetWithText(TextField, 'ivan_dev'), findsOneWidget);
+    expect(find.text('Editar'), findsOneWidget);
+    expect(find.text('Eliminar'), findsOneWidget);
+    expect(find.text('ivan_dev'), findsOneWidget);
+  });
+
+  testWidgets('editing from the details screen persists the change through the repository', (tester) async {
+    fakeRepository.seed([item(title: 'GitHub', username: 'ivan_dev')]);
+
+    await tester.pumpWidget(wrap(const VaultPage()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('GitHub'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Editar'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.widgetWithText(TextField, 'Título'), 'GitHub Enterprise');
+    await tester.tap(find.byIcon(Icons.check));
+    await tester.pumpAndSettle();
+
+    expect(find.text('GitHub Enterprise'), findsOneWidget);
+    expect(fakeRepository.currentItems.single.title, 'GitHub Enterprise');
   });
 
   testWidgets('the drawer\'s "Bloquear bóveda" entry calls onLock', (tester) async {

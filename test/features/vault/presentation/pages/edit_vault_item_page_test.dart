@@ -20,6 +20,21 @@ void main() {
     );
   }
 
+  testWidgets('renders every field from img/05_new_item.png', (tester) async {
+    await tester.pumpWidget(wrap(const EditVaultItemPage()));
+
+    expect(find.text('Nuevo elemento'), findsOneWidget);
+    expect(find.widgetWithText(DropdownButtonFormField<VaultItemType>, 'Tipo'), findsOneWidget);
+    expect(find.text('Ej. Spotify'), findsOneWidget);
+    expect(find.text('Ej. usuario@email.com'), findsOneWidget);
+    expect(find.text('Generar contraseña'), findsOneWidget);
+    expect(find.text('https://ejemplo.com'), findsOneWidget);
+    expect(find.text('Carpeta'), findsOneWidget);
+    expect(find.text('Sin carpeta'), findsOneWidget);
+    expect(find.text('Seleccionar etiquetas'), findsOneWidget);
+    expect(find.text('Notas adicionales'), findsOneWidget);
+  });
+
   testWidgets('creating: rejects an empty title', (tester) async {
     VaultItem? saved;
     await tester.pumpWidget(wrap(EditVaultItemPage(onSave: (item) => saved = item)));
@@ -46,15 +61,22 @@ void main() {
     expect(saved!.id, isNull);
   });
 
-  testWidgets('creating: has no delete button', (tester) async {
+  testWidgets('the inline generate button fills in a 16-character password', (tester) async {
     await tester.pumpWidget(wrap(const EditVaultItemPage()));
 
-    expect(find.byIcon(Icons.delete_outline), findsNothing);
+    await tester.tap(find.byIcon(Icons.refresh));
+    await tester.pump();
+
+    final field = tester.widget<TextField>(
+      find.ancestor(of: find.byIcon(Icons.refresh), matching: find.byType(TextField)),
+    );
+    expect(field.controller!.text, hasLength(16));
   });
 
   testWidgets('editing: pre-fills the form from the existing item', (tester) async {
     await tester.pumpWidget(wrap(EditVaultItemPage(existingItem: existing())));
 
+    expect(find.text('Editar elemento'), findsOneWidget);
     expect(find.text('GitHub'), findsOneWidget);
     expect(find.text('ivan_dev'), findsOneWidget);
   });
@@ -71,35 +93,5 @@ void main() {
 
     expect(saved!.id, original.id);
     expect(saved!.createdAt, original.createdAt);
-  });
-
-  testWidgets('editing: the delete button asks for confirmation before calling onDelete', (tester) async {
-    var deleted = false;
-    await tester.pumpWidget(
-      wrap(EditVaultItemPage(existingItem: existing(), onDelete: () => deleted = true)),
-    );
-
-    await tester.tap(find.byIcon(Icons.delete_outline));
-    await tester.pumpAndSettle();
-    expect(deleted, isFalse, reason: 'should wait for confirmation');
-
-    await tester.tap(find.text('Eliminar'));
-    await tester.pumpAndSettle();
-
-    expect(deleted, isTrue);
-  });
-
-  testWidgets('editing: cancelling the delete dialog does not call onDelete', (tester) async {
-    var deleted = false;
-    await tester.pumpWidget(
-      wrap(EditVaultItemPage(existingItem: existing(), onDelete: () => deleted = true)),
-    );
-
-    await tester.tap(find.byIcon(Icons.delete_outline));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Cancelar'));
-    await tester.pumpAndSettle();
-
-    expect(deleted, isFalse);
   });
 }
