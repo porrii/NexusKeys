@@ -5,9 +5,9 @@ import '../../../../core/di/service_locator.dart';
 import '../../../../core/security/secure_bytes.dart';
 import '../../domain/entities/auth_result.dart';
 import '../../domain/repositories/auth_repository.dart';
+import '../../../vault/presentation/pages/vault_page.dart';
 import 'create_master_password_page.dart';
 import 'lock_screen_page.dart';
-import 'vault_placeholder_page.dart';
 import 'welcome_page.dart';
 
 enum _Screen { loading, welcome, lock, vault }
@@ -136,7 +136,7 @@ class _AuthGatePageState extends State<AuthGatePage> {
           errorText: _lockScreenError,
           onUnlock: _handleUnlock,
         ),
-      _Screen.vault => VaultPlaceholderPage(onLock: _lockVault),
+      _Screen.vault => VaultPage(onLock: _lockVault),
     };
   }
 }

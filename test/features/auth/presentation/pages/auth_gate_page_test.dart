@@ -90,7 +90,7 @@ void main() {
     expect(find.text('Desbloquear bóveda'), findsOneWidget);
   });
 
-  testWidgets('creating a vault navigates through to the vault placeholder', (tester) async {
+  testWidgets('creating a vault navigates through to the vault screen', (tester) async {
     await tester.pumpWidget(wrap());
     await tester.pumpAndSettle();
 
@@ -103,7 +103,7 @@ void main() {
     await tester.tap(find.text('Crear bóveda'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Bóveda desbloqueada'), findsOneWidget);
+    expect(find.text('Buscar en la bóveda'), findsOneWidget);
     expect(fakeRepository.configuredPassword, 'a-strong-password');
   });
 
@@ -122,7 +122,7 @@ void main() {
     expect(find.text('Desbloquear bóveda'), findsOneWidget);
   });
 
-  testWidgets('the correct password unlocks into the vault placeholder', (tester) async {
+  testWidgets('the correct password unlocks into the vault screen', (tester) async {
     fakeRepository.vaultInitialized = true;
     fakeRepository.configuredPassword = 'the-real-password';
 
@@ -133,10 +133,10 @@ void main() {
     await tester.tap(find.text('Desbloquear'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Bóveda desbloqueada'), findsOneWidget);
+    expect(find.text('Buscar en la bóveda'), findsOneWidget);
   });
 
-  testWidgets('locking from the vault placeholder returns to the lock screen', (tester) async {
+  testWidgets('locking from the vault screen drawer returns to the lock screen', (tester) async {
     fakeRepository.vaultInitialized = true;
     fakeRepository.configuredPassword = 'the-real-password';
 
@@ -146,7 +146,9 @@ void main() {
     await tester.tap(find.text('Desbloquear'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Bloquear'));
+    await tester.tap(find.byTooltip('Open navigation menu'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bloquear bóveda'));
     await tester.pumpAndSettle();
 
     expect(find.text('Desbloquear bóveda'), findsOneWidget);
