@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nexuskeys/core/database/vault_session.dart';
 import 'package:nexuskeys/core/di/service_locator.dart';
 import 'package:nexuskeys/core/theme/app_theme.dart';
 import 'package:nexuskeys/features/auth/domain/entities/auth_result.dart';
@@ -49,11 +51,24 @@ class FakeAuthRepository implements AuthRepository {
 
 void main() {
   late FakeAuthRepository fakeRepository;
+  late Directory tempDir;
 
   setUp(() async {
     fakeRepository = FakeAuthRepository();
+    tempDir = await Directory.systemTemp.createTemp('nexuskeys_gate_test_');
     await sl.reset();
     sl.registerSingleton<AuthRepository>(fakeRepository);
+    sl.registerSingleton<VaultSession>(VaultSession(overrideDirectory: tempDir));
+  });
+
+  tearDown(() async {
+    // The vault database file is memory-mapped by the still-open SQLCipher
+    // connection; on Windows the temp dir can't be deleted until that
+    // handle is released.
+    sl<VaultSession>().lock();
+    if (await tempDir.exists()) {
+      await tempDir.delete(recursive: true);
+    }
   });
 
   Widget wrap() => MaterialApp(theme: AppTheme.dark, home: const AuthGatePage());

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/database/vault_session.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/security/secure_bytes.dart';
 import '../../domain/entities/auth_result.dart';
@@ -32,6 +33,7 @@ class AuthGatePage extends StatefulWidget {
 
 class _AuthGatePageState extends State<AuthGatePage> {
   final AuthRepository _authRepository = sl<AuthRepository>();
+  final VaultSession _vaultSession = sl<VaultSession>();
 
   _Screen _screen = _Screen.loading;
   bool _isBusy = false;
@@ -63,9 +65,9 @@ class _AuthGatePageState extends State<AuthGatePage> {
 
     switch (result) {
       case AuthSuccess(:final vaultKey):
-        // No encrypted database exists yet to hand this key to (that lands
-        // in a later module) — wipe it and move on to the placeholder area.
+        await _vaultSession.unlock(vaultKey);
         wipe(vaultKey);
+        if (!mounted) return;
         Navigator.of(context).pop();
         setState(() => _screen = _Screen.vault);
       case AuthFailure():
@@ -87,7 +89,9 @@ class _AuthGatePageState extends State<AuthGatePage> {
 
     switch (result) {
       case AuthSuccess(:final vaultKey):
+        await _vaultSession.unlock(vaultKey);
         wipe(vaultKey);
+        if (!mounted) return;
         setState(() {
           _isBusy = false;
           _screen = _Screen.vault;
@@ -106,6 +110,7 @@ class _AuthGatePageState extends State<AuthGatePage> {
   }
 
   void _lockVault() {
+    _vaultSession.lock();
     setState(() {
       _screen = _Screen.lock;
       _lockScreenError = null;
