@@ -16,12 +16,21 @@ class LockScreenPage extends StatefulWidget {
     this.onBiometricUnlock,
     this.onOtherOptions,
     this.biometricAvailable = true,
+    this.isUnlocking = false,
+    this.errorText,
   });
 
   final ValueChanged<String>? onUnlock;
   final VoidCallback? onBiometricUnlock;
   final VoidCallback? onOtherOptions;
   final bool biometricAvailable;
+
+  /// Shows a spinner in the unlock button and disables input while true.
+  final bool isUnlocking;
+
+  /// Feedback from the last failed attempt (e.g. "Contraseña incorrecta").
+  /// Null when there's nothing to show.
+  final String? errorText;
 
   @override
   State<LockScreenPage> createState() => _LockScreenPageState();
@@ -36,7 +45,10 @@ class _LockScreenPageState extends State<LockScreenPage> {
     super.dispose();
   }
 
-  void _submit() => widget.onUnlock?.call(_passwordController.text);
+  void _submit() {
+    if (widget.isUnlocking) return;
+    widget.onUnlock?.call(_passwordController.text);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,20 +74,39 @@ class _LockScreenPageState extends State<LockScreenPage> {
               AppPasswordField(
                 controller: _passwordController,
                 hintText: 'Contraseña maestra',
+                autofocus: true,
                 onSubmitted: (_) => _submit(),
               ),
+              if (widget.errorText case final error?) ...[
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    error,
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _submit,
-                  child: const Text('Desbloquear'),
+                  onPressed: widget.isUnlocking ? null : _submit,
+                  child: widget.isUnlocking
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('Desbloquear'),
                 ),
               ),
               const SizedBox(height: 28),
               IconButton(
                 iconSize: 36,
-                onPressed: widget.biometricAvailable ? widget.onBiometricUnlock : null,
+                onPressed: widget.biometricAvailable && !widget.isUnlocking
+                    ? widget.onBiometricUnlock
+                    : null,
                 icon: const Icon(Icons.fingerprint),
               ),
               const SizedBox(height: 8),

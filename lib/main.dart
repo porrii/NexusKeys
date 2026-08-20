@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'core/di/service_locator.dart';
 import 'core/theme/app_theme.dart';
-import 'features/auth/presentation/pages/lock_screen_page.dart';
+import 'features/auth/presentation/pages/auth_gate_page.dart';
 
 // cryptography_flutter's native acceleration (Android/iOS/macOS) is
 // registered automatically by Flutter — no manual enable() call needed,
@@ -25,7 +25,7 @@ class NexusKeysApp extends StatelessWidget {
       themeMode: ThemeMode.dark,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      home: const LockScreenPage(),
+      home: const AuthGatePage(),
     );
   }
 }
