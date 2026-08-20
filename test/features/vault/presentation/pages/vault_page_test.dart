@@ -3,7 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexuskeys/core/di/service_locator.dart';
+import 'package:nexuskeys/core/security/crypto_service.dart';
+import 'package:nexuskeys/core/security/crypto_service_impl.dart';
 import 'package:nexuskeys/core/theme/app_theme.dart';
+import 'package:nexuskeys/features/generator/domain/services/password_generator_service.dart';
 import 'package:nexuskeys/features/vault/domain/entities/vault_item.dart';
 import 'package:nexuskeys/features/vault/domain/entities/vault_item_type.dart';
 import 'package:nexuskeys/features/vault/domain/repositories/vault_repository.dart';
@@ -82,6 +85,8 @@ void main() {
     fakeRepository = FakeVaultRepository();
     await sl.reset();
     sl.registerSingleton<VaultRepository>(fakeRepository);
+    sl.registerLazySingleton<CryptoService>(CryptoServiceImpl.new);
+    sl.registerLazySingleton(() => PasswordGeneratorService(cryptoService: sl()));
   });
 
   Widget wrap(Widget child) => MaterialApp(theme: AppTheme.dark, home: child);
@@ -222,11 +227,23 @@ void main() {
     expect(locked, isTrue);
   });
 
-  testWidgets('tapping Generador or Ajustes does not call onLock', (tester) async {
+  testWidgets('tapping Generador opens the generator screen without calling onLock', (tester) async {
+    useTallViewport(tester);
     var locked = false;
     await tester.pumpWidget(wrap(VaultPage(onLock: () => locked = true)));
 
     await tester.tap(find.text('Generador'));
+    await tester.pumpAndSettle();
+
+    expect(locked, isFalse);
+    expect(find.text('Generar contraseña'), findsOneWidget);
+  });
+
+  testWidgets('tapping Ajustes shows a coming-soon message without calling onLock', (tester) async {
+    var locked = false;
+    await tester.pumpWidget(wrap(VaultPage(onLock: () => locked = true)));
+
+    await tester.tap(find.text('Ajustes'));
     await tester.pump();
 
     expect(locked, isFalse);

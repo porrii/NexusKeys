@@ -67,10 +67,12 @@ void main() {
     expect(find.text('S3cr3t!Password'), findsOneWidget);
   });
 
-  testWidgets('shows a strong-password indicator for a strong password', (tester) async {
+  testWidgets('shows a strength indicator matching the real entropy of the password', (tester) async {
     await tester.pumpWidget(wrap(ItemDetailsPage(item: googleItem())));
 
-    expect(find.text('Fuerte'), findsOneWidget);
+    // 'S3cr3t!Password' spans all four character classes at 15 characters
+    // (~98 bits) — comfortably in the "Muy fuerte" bracket.
+    expect(find.text('Muy fuerte'), findsOneWidget);
   });
 
   testWidgets('the favorite star updates immediately and reports the new value', (tester) async {

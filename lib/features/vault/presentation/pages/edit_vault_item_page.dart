@@ -1,34 +1,11 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 
+import '../../../../core/di/service_locator.dart';
 import '../../../../core/widgets/app_password_field.dart';
+import '../../../generator/domain/entities/generator_options.dart';
+import '../../../generator/domain/services/password_generator_service.dart';
 import '../../domain/entities/vault_item.dart';
 import '../../domain/entities/vault_item_type.dart';
-
-/// A quick, sensible-defaults password: 16 characters spanning every
-/// character class, drawn from a CSPRNG. The Generator module
-/// (img/06_generator.png) adds the real configurable version — length,
-/// character-set toggles, pronounceable mode, entropy/strength display;
-/// this inline button exists only so "Generar contraseña" in
-/// img/05_new_item.png does something reasonable in the meantime.
-String _generateQuickPassword() {
-  const lower = 'abcdefghijklmnopqrstuvwxyz';
-  const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const digits = '0123456789';
-  const symbols = '!@#\$%^&*()-_=+?';
-  const all = lower + upper + digits + symbols;
-
-  final random = Random.secure();
-  final chars = [
-    lower[random.nextInt(lower.length)],
-    upper[random.nextInt(upper.length)],
-    digits[random.nextInt(digits.length)],
-    symbols[random.nextInt(symbols.length)],
-    for (var i = 0; i < 12; i++) all[random.nextInt(all.length)],
-  ]..shuffle(random);
-  return chars.join();
-}
 
 /// Create/edit form for a vault item — reproduces img/05_new_item.png for
 /// creation; there's no separate mockup for editing, so it reuses the same
@@ -48,6 +25,8 @@ class EditVaultItemPage extends StatefulWidget {
 }
 
 class _EditVaultItemPageState extends State<EditVaultItemPage> {
+  final PasswordGeneratorService _generator = sl<PasswordGeneratorService>();
+
   late VaultItemType _type;
   late final TextEditingController _title;
   late final TextEditingController _username;
@@ -167,7 +146,9 @@ class _EditVaultItemPageState extends State<EditVaultItemPage> {
               trailing: IconButton(
                 icon: const Icon(Icons.refresh),
                 tooltip: 'Generar contraseña',
-                onPressed: () => setState(() => _password.text = _generateQuickPassword()),
+                onPressed: () => setState(
+                  () => _password.text = _generator.generate(GeneratorOptions.recommended()),
+                ),
               ),
             ),
             const SizedBox(height: 16),

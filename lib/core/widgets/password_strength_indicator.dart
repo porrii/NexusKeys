@@ -10,12 +10,7 @@ class PasswordStrengthIndicator extends StatelessWidget {
 
   final PasswordStrength strength;
 
-  double get _progress => switch (strength) {
-        PasswordStrength.empty => 0,
-        PasswordStrength.weak => 1 / 3,
-        PasswordStrength.medium => 2 / 3,
-        PasswordStrength.strong => 1,
-      };
+  double get _progress => strength.segments / 5;
 
   @override
   Widget build(BuildContext context) {

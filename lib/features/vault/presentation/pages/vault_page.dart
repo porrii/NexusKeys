@@ -4,6 +4,7 @@ import '../../../../core/di/service_locator.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/vault_item.dart';
 import '../../domain/repositories/vault_repository.dart';
+import '../../../generator/presentation/pages/generator_page.dart';
 import '../widgets/vault_item_tile.dart';
 import 'edit_vault_item_page.dart';
 import 'item_details_page.dart';
@@ -36,6 +37,10 @@ class _VaultPageState extends State<VaultPage> {
       // Already sorted by most-recently-updated by the repository.
       _VaultFilter.recent => items,
     };
+  }
+
+  void _openGenerator() {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const GeneratorPage()));
   }
 
   void _showComingSoon() {
@@ -194,7 +199,10 @@ class _VaultPageState extends State<VaultPage> {
         onPressed: _openCreateItem,
         child: const Icon(Icons.add),
       ),
-      bottomNavigationBar: _VaultBottomNav(onNonVaultTap: _showComingSoon),
+      bottomNavigationBar: _VaultBottomNav(
+        onGeneratorTap: _openGenerator,
+        onSettingsTap: _showComingSoon,
+      ),
     );
   }
 }
@@ -228,18 +236,24 @@ class _FilterChip extends StatelessWidget {
 }
 
 class _VaultBottomNav extends StatelessWidget {
-  const _VaultBottomNav({required this.onNonVaultTap});
+  const _VaultBottomNav({required this.onGeneratorTap, required this.onSettingsTap});
 
-  final VoidCallback onNonVaultTap;
+  final VoidCallback onGeneratorTap;
+  final VoidCallback onSettingsTap;
 
   static const _vaultTabIndex = 0;
+  static const _generatorTabIndex = 1;
 
   @override
   Widget build(BuildContext context) {
     return NavigationBar(
       selectedIndex: _vaultTabIndex,
       onDestinationSelected: (index) {
-        if (index != _vaultTabIndex) onNonVaultTap();
+        if (index == _generatorTabIndex) {
+          onGeneratorTap();
+        } else if (index != _vaultTabIndex) {
+          onSettingsTap();
+        }
       },
       destinations: const [
         NavigationDestination(icon: Icon(Icons.lock_outlined), selectedIcon: Icon(Icons.lock), label: 'Bóveda'),

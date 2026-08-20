@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nexuskeys/core/di/service_locator.dart';
+import 'package:nexuskeys/core/security/crypto_service.dart';
+import 'package:nexuskeys/core/security/crypto_service_impl.dart';
 import 'package:nexuskeys/core/theme/app_theme.dart';
+import 'package:nexuskeys/features/generator/domain/services/password_generator_service.dart';
 import 'package:nexuskeys/features/vault/domain/entities/vault_item.dart';
 import 'package:nexuskeys/features/vault/domain/entities/vault_item_type.dart';
 import 'package:nexuskeys/features/vault/presentation/pages/edit_vault_item_page.dart';
 
 void main() {
+  setUp(() async {
+    await sl.reset();
+    sl.registerLazySingleton<CryptoService>(CryptoServiceImpl.new);
+    sl.registerLazySingleton(() => PasswordGeneratorService(cryptoService: sl()));
+  });
+
   Widget wrap(Widget child) => MaterialApp(theme: AppTheme.dark, home: child);
 
   VaultItem existing() {
