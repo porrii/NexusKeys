@@ -1,15 +1,119 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nexuskeys/core/di/service_locator.dart';
 import 'package:nexuskeys/core/theme/app_theme.dart';
+import 'package:nexuskeys/features/vault/domain/entities/vault_item.dart';
+import 'package:nexuskeys/features/vault/domain/entities/vault_item_type.dart';
+import 'package:nexuskeys/features/vault/domain/repositories/vault_repository.dart';
 import 'package:nexuskeys/features/vault/presentation/pages/vault_page.dart';
 
+/// Hand-written fake instead of a mocking framework, mirroring
+/// FakeAuthRepository in auth_gate_page_test.dart. Its own correctness
+/// (real SQLCipher-backed behaviour) is covered separately by
+/// vault_repository_impl_test.dart; this fake only needs to be controllable
+/// enough to exercise VaultPage's UI logic.
+class FakeVaultRepository implements VaultRepository {
+  @override
+  List<VaultItem> currentItems = [];
+
+  @override
+  List<VaultItem> currentTrash = [];
+
+  final _itemsController = StreamController<List<VaultItem>>.broadcast();
+
+  int _nextId = 1;
+
+  void seed(List<VaultItem> seedItems) {
+    currentItems = seedItems;
+  }
+
+  @override
+  Stream<List<VaultItem>> get itemsStream => _itemsController.stream;
+
+  @override
+  Stream<List<VaultItem>> get trashStream => const Stream.empty();
+
+  @override
+  Future<VaultItem> create(VaultItem draft) async {
+    final created = draft.copyWith(id: _nextId++);
+    currentItems = [...currentItems, created];
+    _itemsController.add(currentItems);
+    return created;
+  }
+
+  @override
+  Future<void> update(VaultItem item) async {
+    currentItems = [
+      for (final existing in currentItems) existing.id == item.id ? item : existing,
+    ];
+    _itemsController.add(currentItems);
+  }
+
+  @override
+  Future<void> setFavorite(int id, bool isFavorite) async {}
+
+  @override
+  Future<void> moveToTrash(int id) async {
+    currentItems = currentItems.where((i) => i.id != id).toList();
+    _itemsController.add(currentItems);
+  }
+
+  @override
+  Future<void> restoreFromTrash(int id) async {}
+
+  @override
+  Future<void> deletePermanently(int id) async {}
+
+  @override
+  Future<void> reload() async {}
+
+  @override
+  void dispose() {
+    _itemsController.close();
+  }
+}
+
 void main() {
+  late FakeVaultRepository fakeRepository;
+
+  setUp(() async {
+    fakeRepository = FakeVaultRepository();
+    await sl.reset();
+    sl.registerSingleton<VaultRepository>(fakeRepository);
+  });
+
   Widget wrap(Widget child) => MaterialApp(theme: AppTheme.dark, home: child);
+
+  VaultItem item({
+    required String title,
+    String? username,
+    bool favorite = false,
+  }) {
+    final now = DateTime.now();
+    return VaultItem(
+      type: VaultItemType.password,
+      title: title,
+      username: username,
+      isFavorite: favorite,
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
+
+  List<VaultItem> sampleItems() => [
+        item(title: 'Google', username: 'ivan@gmail.com', favorite: true),
+        item(title: 'GitHub', username: 'ivan_dev'),
+        item(title: 'YouTube', username: 'ivan@gmail.com'),
+        item(title: 'Netflix', username: 'ivan@gmail.com'),
+        item(title: 'Tarjeta Banco'),
+        item(title: 'Correo Pro', username: 'ivan@protonmail.com'),
+      ];
 
   // ListView.builder only builds items within the viewport, and the default
   // test surface is too short to fit all six sample rows below the app bar,
-  // search field and filter chips. A taller viewport lets the "every
-  // element is present" assertions check the whole list without scrolling.
+  // search field and filter chips.
   void useTallViewport(WidgetTester tester) {
     tester.view.physicalSize = const Size(400, 1400);
     tester.view.devicePixelRatio = 1.0;
@@ -18,7 +122,10 @@ void main() {
 
   testWidgets('renders every element from img/03_vault.png', (tester) async {
     useTallViewport(tester);
+    fakeRepository.seed(sampleItems());
+
     await tester.pumpWidget(wrap(const VaultPage()));
+    await tester.pumpAndSettle();
 
     expect(find.text('NexusKeys'), findsOneWidget);
     expect(find.text('Buscar en la bóveda'), findsOneWidget);
@@ -37,21 +144,51 @@ void main() {
     expect(find.text('Ajustes'), findsOneWidget);
   });
 
-  testWidgets('only Google (the sample favorite) shows a star', (tester) async {
+  testWidgets('shows an empty-vault message when there are no items', (tester) async {
     await tester.pumpWidget(wrap(const VaultPage()));
+    await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.star), findsOneWidget);
+    expect(find.text('Tu bóveda está vacía'), findsOneWidget);
   });
 
   testWidgets('the Favoritos chip filters the list down to favorite items only', (tester) async {
-    await tester.pumpWidget(wrap(const VaultPage()));
+    fakeRepository.seed(sampleItems());
 
+    await tester.pumpWidget(wrap(const VaultPage()));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Favoritos'));
     await tester.pumpAndSettle();
 
     expect(find.text('Google'), findsOneWidget);
     expect(find.text('GitHub'), findsNothing);
-    expect(find.text('Netflix'), findsNothing);
+  });
+
+  testWidgets('the FAB opens the create-item form, and saving adds it to the list', (tester) async {
+    await tester.pumpWidget(wrap(const VaultPage()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.add));
+    await tester.pumpAndSettle();
+    expect(find.text('Nuevo elemento'), findsOneWidget);
+
+    await tester.enterText(find.widgetWithText(TextField, 'Título'), 'ProtonMail');
+    await tester.tap(find.byIcon(Icons.check));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nuevo elemento'), findsNothing);
+    expect(find.text('ProtonMail'), findsOneWidget);
+  });
+
+  testWidgets('tapping an item opens the edit form pre-filled with its data', (tester) async {
+    fakeRepository.seed([item(title: 'GitHub', username: 'ivan_dev')]);
+
+    await tester.pumpWidget(wrap(const VaultPage()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('GitHub'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Editar elemento'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'ivan_dev'), findsOneWidget);
   });
 
   testWidgets('the drawer\'s "Bloquear bóveda" entry calls onLock', (tester) async {

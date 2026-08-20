@@ -5,6 +5,7 @@ import '../../../../core/di/service_locator.dart';
 import '../../../../core/security/secure_bytes.dart';
 import '../../domain/entities/auth_result.dart';
 import '../../domain/repositories/auth_repository.dart';
+import '../../../vault/domain/repositories/vault_repository.dart';
 import '../../../vault/presentation/pages/vault_page.dart';
 import 'create_master_password_page.dart';
 import 'lock_screen_page.dart';
@@ -67,6 +68,7 @@ class _AuthGatePageState extends State<AuthGatePage> {
       case AuthSuccess(:final vaultKey):
         await _vaultSession.unlock(vaultKey);
         wipe(vaultKey);
+        await sl<VaultRepository>().reload();
         if (!mounted) return;
         Navigator.of(context).pop();
         setState(() => _screen = _Screen.vault);
@@ -91,6 +93,7 @@ class _AuthGatePageState extends State<AuthGatePage> {
       case AuthSuccess(:final vaultKey):
         await _vaultSession.unlock(vaultKey);
         wipe(vaultKey);
+        await sl<VaultRepository>().reload();
         if (!mounted) return;
         setState(() {
           _isBusy = false;

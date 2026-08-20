@@ -9,6 +9,7 @@ import 'package:nexuskeys/core/theme/app_theme.dart';
 import 'package:nexuskeys/features/auth/domain/entities/auth_result.dart';
 import 'package:nexuskeys/features/auth/domain/repositories/auth_repository.dart';
 import 'package:nexuskeys/features/auth/presentation/pages/auth_gate_page.dart';
+import 'package:nexuskeys/features/vault/di/vault_dependencies.dart';
 
 /// Hand-written fake instead of a mocking framework — AuthRepository has
 /// only four methods and this keeps the test dependency-free. Its own
@@ -59,6 +60,10 @@ void main() {
     await sl.reset();
     sl.registerSingleton<AuthRepository>(fakeRepository);
     sl.registerSingleton<VaultSession>(VaultSession(overrideDirectory: tempDir));
+    // VaultPage (shown after a successful unlock) and AuthGatePage's own
+    // post-unlock reload() both need a real VaultRepository — registered
+    // the same way production's setupServiceLocator() does.
+    configureVaultDependencies(sl);
   });
 
   tearDown(() async {

@@ -1,6 +1,7 @@
 import 'package:get_it/get_it.dart';
 
 import '../../features/auth/di/auth_dependencies.dart';
+import '../../features/vault/di/vault_dependencies.dart';
 import '../database/vault_session.dart';
 
 /// Global service locator. Each feature module registers its own
@@ -15,4 +16,5 @@ Future<void> setupServiceLocator() async {
   sl.registerLazySingleton(VaultSession.new);
 
   configureAuthDependencies(sl);
+  configureVaultDependencies(sl);
 }

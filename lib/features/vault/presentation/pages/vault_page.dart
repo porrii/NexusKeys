@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/di/service_locator.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../domain/entities/vault_item.dart';
+import '../../domain/repositories/vault_repository.dart';
 import '../widgets/vault_item_tile.dart';
+import 'edit_vault_item_page.dart';
 
 enum _VaultFilter { all, favorites, recent }
 
-/// Reproduces img/03_vault.png.
-///
-/// The item list below uses sample data — step 9 ("Implementar CRUD
-/// completo de la bóveda") replaces it with real rows read from
-/// [VaultSession.database]. This module only builds the screen's visual
-/// shell: search field, category chips, list layout, FAB and bottom nav.
+/// Reproduces img/03_vault.png, backed by the real encrypted database.
 class VaultPage extends StatefulWidget {
   const VaultPage({super.key, this.onLock});
 
@@ -26,38 +25,53 @@ class VaultPage extends StatefulWidget {
 }
 
 class _VaultPageState extends State<VaultPage> {
+  final VaultRepository _repository = sl<VaultRepository>();
   _VaultFilter _filter = _VaultFilter.all;
 
-  static const _sampleItems = [
-    (title: 'Google', subtitle: 'ivan@gmail.com', color: Color(0xFF1E88E5), favorite: true),
-    (title: 'GitHub', subtitle: 'ivan_dev', color: Color(0xFF24292E), favorite: false),
-    (title: 'YouTube', subtitle: 'ivan@gmail.com', color: Color(0xFFE53935), favorite: false),
-    (title: 'Netflix', subtitle: 'ivan@gmail.com', color: Color(0xFFB71C1C), favorite: false),
-    (
-      title: 'Tarjeta Banco',
-      subtitle: '•••• •••• •••• 1234',
-      color: Color(0xFF1565C0),
-      favorite: false,
-    ),
-    (
-      title: 'Correo Pro',
-      subtitle: 'ivan@protonmail.com',
-      color: Color(0xFF5E35B1),
-      favorite: false,
-    ),
-  ];
-
-  List<({String title, String subtitle, Color color, bool favorite})> get _visibleItems {
+  List<VaultItem> _applyFilter(List<VaultItem> items) {
     return switch (_filter) {
-      _VaultFilter.all => _sampleItems,
-      _VaultFilter.favorites => _sampleItems.where((i) => i.favorite).toList(),
-      _VaultFilter.recent => _sampleItems,
+      _VaultFilter.all => items,
+      _VaultFilter.favorites => items.where((i) => i.isFavorite).toList(),
+      // Already sorted by most-recently-updated by the repository.
+      _VaultFilter.recent => items,
     };
   }
 
   void _showComingSoon() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Disponible próximamente')),
+    );
+  }
+
+  void _openCreateItem() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => EditVaultItemPage(onSave: _repository.create),
+      ),
+    );
+  }
+
+  void _openEditItem(VaultItem item) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => EditVaultItemPage(
+          existingItem: item,
+          onSave: _repository.update,
+          onDelete: () => _deleteWithUndo(item),
+        ),
+      ),
+    );
+  }
+
+  void _deleteWithUndo(VaultItem item) {
+    final id = item.id;
+    if (id == null) return;
+    _repository.moveToTrash(id);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('"${item.title}" se movió a la papelera'),
+        action: SnackBarAction(label: 'Deshacer', onPressed: () => _repository.restoreFromTrash(id)),
+      ),
     );
   }
 
@@ -126,17 +140,34 @@ class _VaultPageState extends State<VaultPage> {
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
-              itemCount: _visibleItems.length,
-              itemBuilder: (context, index) {
-                final item = _visibleItems[index];
-                return VaultItemTile(
-                  title: item.title,
-                  subtitle: item.subtitle,
-                  avatarColor: item.color,
-                  isFavorite: item.favorite,
-                  onTap: _showComingSoon,
+            child: StreamBuilder<List<VaultItem>>(
+              initialData: _repository.currentItems,
+              stream: _repository.itemsStream,
+              builder: (context, snapshot) {
+                final items = _applyFilter(snapshot.data ?? const []);
+
+                if (items.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'Tu bóveda está vacía',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+                  itemCount: items.length,
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    return VaultItemTile(
+                      title: item.title,
+                      subtitle: item.username ?? item.url ?? item.category ?? '',
+                      avatarColor: item.type.color,
+                      isFavorite: item.isFavorite,
+                      onTap: () => _openEditItem(item),
+                    );
+                  },
                 );
               },
             ),
@@ -144,7 +175,7 @@ class _VaultPageState extends State<VaultPage> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showComingSoon,
+        onPressed: _openCreateItem,
         child: const Icon(Icons.add),
       ),
       bottomNavigationBar: _VaultBottomNav(onNonVaultTap: _showComingSoon),
