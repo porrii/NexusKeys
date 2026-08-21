@@ -40,6 +40,11 @@ class VaultSession {
     _database = VaultDatabase.open('${dir.path}${Platform.pathSeparator}$_fileName', key);
   }
 
+  /// Re-encrypts the open database under [newKey] — call this whenever the
+  /// master password changes, right after the new key is derived, so the
+  /// vault stays decryptable with it. Throws [StateError] if locked.
+  void rekey(Uint8List newKey) => database.rekey(newKey);
+
   void lock() {
     _database?.close();
     _database = null;

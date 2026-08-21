@@ -53,4 +53,22 @@ void main() {
 
     expect(session.database, isNot(same(firstDatabase)));
   });
+
+  group('rekey', () {
+    final newKey = Uint8List.fromList(List.generate(32, (i) => 255 - i));
+
+    test('throws StateError while locked', () {
+      expect(() => session.rekey(newKey), throwsStateError);
+    });
+
+    test('the vault is only unlockable with the new key afterwards', () async {
+      await session.unlock(key);
+      session.rekey(newKey);
+      session.lock();
+
+      await expectLater(() => session.unlock(key), throwsA(anything));
+      await session.unlock(newKey);
+      expect(session.isUnlocked, isTrue);
+    });
+  });
 }

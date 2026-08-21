@@ -82,4 +82,40 @@ void main() {
     const plainSqliteMagic = 'SQLite format 3';
     expect(headerText, isNot(plainSqliteMagic));
   });
+
+  group('rekey', () {
+    test('the database is only readable with the new key afterwards', () {
+      final db = VaultDatabase.open(dbPath, key);
+      db.raw.execute(
+        'INSERT INTO vault_items (type, title, created_at, updated_at) VALUES (?, ?, ?, ?);',
+        ['password', 'GitHub', 1000, 1000],
+      );
+
+      db.rekey(otherKey);
+      db.close();
+
+      expect(
+        () => VaultDatabase.open(dbPath, key),
+        throwsA(isA<InvalidDatabaseKeyException>()),
+      );
+      final reopened = VaultDatabase.open(dbPath, otherKey);
+      addTearDown(reopened.close);
+      expect(reopened.raw.select('SELECT title FROM vault_items;').single['title'], 'GitHub');
+    });
+
+    test('data survives the rekey without needing to be rewritten', () {
+      final db = VaultDatabase.open(dbPath, key);
+      db.raw.execute(
+        'INSERT INTO vault_items (type, title, created_at, updated_at) VALUES (?, ?, ?, ?);',
+        ['password', 'Netflix', 2000, 2000],
+      );
+
+      db.rekey(otherKey);
+
+      // Still usable on the same, now-rekeyed connection without reopening.
+      final rows = db.raw.select('SELECT title FROM vault_items;');
+      expect(rows.single['title'], 'Netflix');
+      db.close();
+    });
+  });
 }

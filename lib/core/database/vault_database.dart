@@ -66,5 +66,14 @@ class VaultDatabase {
   /// run queries against once the CRUD layer is built.
   Database get raw => _db;
 
+  /// Re-encrypts the database in place under [newKey] — this is how
+  /// changing the master password actually re-protects the vault, not just
+  /// its auth verifier. Requires the connection to already be open under
+  /// its current (correct) key; SQLCipher does the re-encryption itself via
+  /// `PRAGMA rekey`, so nothing needs to be read out and rewritten manually.
+  void rekey(Uint8List newKey) {
+    _db.execute("PRAGMA rekey = \"x'${_toHex(newKey)}'\";");
+  }
+
   void close() => _db.close();
 }
