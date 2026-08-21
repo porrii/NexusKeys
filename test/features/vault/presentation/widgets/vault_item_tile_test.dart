@@ -39,6 +39,35 @@ void main() {
     expect(find.byIcon(Icons.star), findsNothing);
   });
 
+  testWidgets('alwaysShowStar shows an outline star instead of a chevron when not favorite', (tester) async {
+    await tester.pumpWidget(wrap(
+      const VaultItemTile(
+        title: 'GitHub',
+        subtitle: 'ivan_dev',
+        avatarColor: Colors.black,
+        alwaysShowStar: true,
+      ),
+    ));
+
+    expect(find.byIcon(Icons.star_border), findsOneWidget);
+    expect(find.byIcon(Icons.chevron_right), findsNothing);
+  });
+
+  testWidgets('alwaysShowStar still shows the filled star when favorite', (tester) async {
+    await tester.pumpWidget(wrap(
+      const VaultItemTile(
+        title: 'Google',
+        subtitle: 'ivan@gmail.com',
+        avatarColor: Colors.blue,
+        isFavorite: true,
+        alwaysShowStar: true,
+      ),
+    ));
+
+    expect(find.byIcon(Icons.star), findsOneWidget);
+    expect(find.byIcon(Icons.star_border), findsNothing);
+  });
+
   testWidgets('invokes onTap when tapped', (tester) async {
     var tapped = false;
     await tester.pumpWidget(wrap(

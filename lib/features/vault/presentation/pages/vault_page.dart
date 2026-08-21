@@ -28,7 +28,16 @@ class VaultPage extends StatefulWidget {
 
 class _VaultPageState extends State<VaultPage> {
   final VaultRepository _repository = sl<VaultRepository>();
+  final _searchController = TextEditingController();
   _VaultFilter _filter = _VaultFilter.all;
+  bool _isSearching = false;
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   List<VaultItem> _applyFilter(List<VaultItem> items) {
     return switch (_filter) {
@@ -37,6 +46,35 @@ class _VaultPageState extends State<VaultPage> {
       // Already sorted by most-recently-updated by the repository.
       _VaultFilter.recent => items,
     };
+  }
+
+  /// Matches against every field a user is likely to search by — not just
+  /// the title shown in the row — so e.g. searching an email finds the
+  /// account it belongs to even if the title doesn't mention it.
+  List<VaultItem> _applySearch(List<VaultItem> items) {
+    final query = _searchQuery.trim().toLowerCase();
+    if (query.isEmpty) return items;
+
+    return items.where((item) {
+      final haystack = [
+        item.title,
+        item.username ?? '',
+        item.url ?? '',
+        item.category ?? '',
+        ...item.tags,
+      ].join(' ').toLowerCase();
+      return haystack.contains(query);
+    }).toList();
+  }
+
+  void _enterSearch() => setState(() => _isSearching = true);
+
+  void _exitSearch() {
+    setState(() {
+      _isSearching = false;
+      _searchQuery = '';
+      _searchController.clear();
+    });
   }
 
   void _openGenerator() {
@@ -103,9 +141,33 @@ class _VaultPageState extends State<VaultPage> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
-        title: Text('NexusKeys', style: theme.textTheme.titleLarge),
+        automaticallyImplyLeading: !_isSearching,
+        titleSpacing: _isSearching ? 4 : null,
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                onChanged: (value) => setState(() => _searchQuery = value),
+                decoration: InputDecoration(
+                  hintText: 'Buscar en la bóveda',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchQuery.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => setState(() {
+                            _searchController.clear();
+                            _searchQuery = '';
+                          }),
+                        ),
+                ),
+              )
+            : Text('NexusKeys', style: theme.textTheme.titleLarge),
         actions: [
-          IconButton(icon: const Icon(Icons.search), onPressed: _showComingSoon),
+          if (_isSearching)
+            TextButton(onPressed: _exitSearch, child: const Text('Cancelar'))
+          else
+            IconButton(icon: const Icon(Icons.search), onPressed: _enterSearch),
         ],
       ),
       drawer: Drawer(
@@ -122,55 +184,73 @@ class _VaultPageState extends State<VaultPage> {
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-            child: TextField(
-              readOnly: true,
-              onTap: _showComingSoon,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                hintText: 'Buscar en la bóveda',
+          if (_isSearching)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: StreamBuilder<List<VaultItem>>(
+                  initialData: _repository.currentItems,
+                  stream: _repository.itemsStream,
+                  builder: (context, snapshot) {
+                    final count = _applySearch(snapshot.data ?? const []).length;
+                    return Text('Resultados ($count)', style: theme.textTheme.bodyMedium);
+                  },
+                ),
+              ),
+            )
+          else ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+              child: TextField(
+                readOnly: true,
+                onTap: _enterSearch,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.search),
+                  hintText: 'Buscar en la bóveda',
+                ),
               ),
             ),
-          ),
-          SizedBox(
-            height: 40,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                _FilterChip(
-                  label: 'Todas',
-                  selected: _filter == _VaultFilter.all,
-                  onTap: () => setState(() => _filter = _VaultFilter.all),
-                ),
-                const SizedBox(width: 10),
-                _FilterChip(
-                  label: 'Favoritos',
-                  selected: _filter == _VaultFilter.favorites,
-                  onTap: () => setState(() => _filter = _VaultFilter.favorites),
-                ),
-                const SizedBox(width: 10),
-                _FilterChip(
-                  label: 'Recientes',
-                  selected: _filter == _VaultFilter.recent,
-                  onTap: () => setState(() => _filter = _VaultFilter.recent),
-                ),
-              ],
+            SizedBox(
+              height: 40,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  _FilterChip(
+                    label: 'Todas',
+                    selected: _filter == _VaultFilter.all,
+                    onTap: () => setState(() => _filter = _VaultFilter.all),
+                  ),
+                  const SizedBox(width: 10),
+                  _FilterChip(
+                    label: 'Favoritos',
+                    selected: _filter == _VaultFilter.favorites,
+                    onTap: () => setState(() => _filter = _VaultFilter.favorites),
+                  ),
+                  const SizedBox(width: 10),
+                  _FilterChip(
+                    label: 'Recientes',
+                    selected: _filter == _VaultFilter.recent,
+                    onTap: () => setState(() => _filter = _VaultFilter.recent),
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: 8),
           Expanded(
             child: StreamBuilder<List<VaultItem>>(
               initialData: _repository.currentItems,
               stream: _repository.itemsStream,
               builder: (context, snapshot) {
-                final items = _applyFilter(snapshot.data ?? const []);
+                final source = snapshot.data ?? const <VaultItem>[];
+                final items = _isSearching ? _applySearch(source) : _applyFilter(source);
 
                 if (items.isEmpty) {
                   return Center(
                     child: Text(
-                      'Tu bóveda está vacía',
+                      _isSearching ? 'Sin resultados' : 'Tu bóveda está vacía',
                       style: theme.textTheme.bodyMedium,
                     ),
                   );
@@ -186,6 +266,7 @@ class _VaultPageState extends State<VaultPage> {
                       subtitle: item.username ?? item.url ?? item.category ?? '',
                       avatarColor: item.type.color,
                       isFavorite: item.isFavorite,
+                      alwaysShowStar: _isSearching,
                       onTap: () => _openItemDetails(item),
                     );
                   },
@@ -195,10 +276,12 @@ class _VaultPageState extends State<VaultPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openCreateItem,
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: _isSearching
+          ? null
+          : FloatingActionButton(
+              onPressed: _openCreateItem,
+              child: const Icon(Icons.add),
+            ),
       bottomNavigationBar: _VaultBottomNav(
         onGeneratorTap: _openGenerator,
         onSettingsTap: _showComingSoon,

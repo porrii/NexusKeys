@@ -18,6 +18,7 @@ class VaultItemTile extends StatelessWidget {
     required this.subtitle,
     required this.avatarColor,
     this.isFavorite = false,
+    this.alwaysShowStar = false,
     this.onTap,
     super.key,
   });
@@ -26,6 +27,12 @@ class VaultItemTile extends StatelessWidget {
   final String subtitle;
   final Color avatarColor;
   final bool isFavorite;
+
+  /// img/07_search.png's result rows show a star (filled or outline) on
+  /// every row instead of img/03_vault.png's star-or-chevron — search
+  /// results are all "found", so the trailing icon there is purely a
+  /// favorite indicator, never a navigation chevron.
+  final bool alwaysShowStar;
   final VoidCallback? onTap;
 
   @override
@@ -79,9 +86,12 @@ class VaultItemTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              isFavorite
-                  ? const Icon(Icons.star, color: AppColors.warning)
-                  : Icon(Icons.chevron_right, color: theme.textTheme.bodyMedium?.color),
+              if (isFavorite)
+                const Icon(Icons.star, color: AppColors.warning)
+              else if (alwaysShowStar)
+                Icon(Icons.star_border, color: theme.textTheme.bodyMedium?.color)
+              else
+                Icon(Icons.chevron_right, color: theme.textTheme.bodyMedium?.color),
             ],
           ),
         ),

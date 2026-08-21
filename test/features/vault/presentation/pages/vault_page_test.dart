@@ -249,4 +249,100 @@ void main() {
     expect(locked, isFalse);
     expect(find.text('Disponible próximamente'), findsOneWidget);
   });
+
+  group('search (img/07_search.png)', () {
+    testWidgets('tapping the search field enters search mode', (tester) async {
+      useTallViewport(tester);
+      fakeRepository.seed(sampleItems());
+      await tester.pumpWidget(wrap(const VaultPage()));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Cancelar'), findsOneWidget);
+      expect(find.text('Todas'), findsNothing);
+      expect(find.byType(FloatingActionButton), findsNothing);
+    });
+
+    testWidgets('typing filters results and shows a result count', (tester) async {
+      useTallViewport(tester);
+      fakeRepository.seed([
+        item(title: 'Google', username: 'ivan@gmail.com', favorite: true),
+        item(title: 'Google Workspace', username: 'trabajo@empresa.com'),
+        item(title: 'GitHub', username: 'ivan_dev'),
+      ]);
+      await tester.pumpWidget(wrap(const VaultPage()));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'goo');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Resultados (2)'), findsOneWidget);
+      expect(find.text('Google'), findsOneWidget);
+      expect(find.text('Google Workspace'), findsOneWidget);
+      expect(find.text('GitHub'), findsNothing);
+    });
+
+    testWidgets('matches on username too, not just title', (tester) async {
+      useTallViewport(tester);
+      fakeRepository.seed(sampleItems());
+      await tester.pumpWidget(wrap(const VaultPage()));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'protonmail');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Resultados (1)'), findsOneWidget);
+      expect(find.text('Correo Pro'), findsOneWidget);
+    });
+
+    testWidgets('non-favorite results show an outline star, not a chevron', (tester) async {
+      useTallViewport(tester);
+      fakeRepository.seed([item(title: 'GitHub', username: 'ivan_dev')]);
+      await tester.pumpWidget(wrap(const VaultPage()));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'git');
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.star_border), findsOneWidget);
+      expect(find.byIcon(Icons.chevron_right), findsNothing);
+    });
+
+    testWidgets('Cancelar exits search mode and restores the filter chips', (tester) async {
+      useTallViewport(tester);
+      fakeRepository.seed(sampleItems());
+      await tester.pumpWidget(wrap(const VaultPage()));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'goo');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Cancelar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Todas'), findsOneWidget);
+      expect(find.text('Cancelar'), findsNothing);
+      expect(find.byType(FloatingActionButton), findsOneWidget);
+    });
+
+    testWidgets('an empty query while searching shows every item', (tester) async {
+      useTallViewport(tester);
+      fakeRepository.seed(sampleItems());
+      await tester.pumpWidget(wrap(const VaultPage()));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Resultados (${sampleItems().length})'), findsOneWidget);
+    });
+  });
 }
