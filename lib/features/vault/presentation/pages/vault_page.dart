@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/vault_item.dart';
 import '../../domain/repositories/vault_repository.dart';
 import '../../../generator/presentation/pages/generator_page.dart';
+import '../../../settings/presentation/pages/settings_page.dart';
 import '../widgets/vault_item_tile.dart';
 import 'edit_vault_item_page.dart';
 import 'item_details_page.dart';
@@ -81,10 +82,8 @@ class _VaultPageState extends State<VaultPage> {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const GeneratorPage()));
   }
 
-  void _showComingSoon() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Disponible próximamente')),
-    );
+  void _openSettings() {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsPage()));
   }
 
   void _openCreateItem() {
@@ -284,7 +283,7 @@ class _VaultPageState extends State<VaultPage> {
             ),
       bottomNavigationBar: _VaultBottomNav(
         onGeneratorTap: _openGenerator,
-        onSettingsTap: _showComingSoon,
+        onSettingsTap: _openSettings,
       ),
     );
   }

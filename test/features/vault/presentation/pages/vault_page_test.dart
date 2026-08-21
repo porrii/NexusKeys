@@ -2,11 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:nexuskeys/core/di/service_locator.dart';
 import 'package:nexuskeys/core/security/crypto_service.dart';
 import 'package:nexuskeys/core/security/crypto_service_impl.dart';
 import 'package:nexuskeys/core/theme/app_theme.dart';
 import 'package:nexuskeys/features/generator/domain/services/password_generator_service.dart';
+import 'package:nexuskeys/features/settings/data/repositories/settings_repository_impl.dart';
+import 'package:nexuskeys/features/settings/domain/repositories/settings_repository.dart';
 import 'package:nexuskeys/features/vault/domain/entities/vault_item.dart';
 import 'package:nexuskeys/features/vault/domain/entities/vault_item_type.dart';
 import 'package:nexuskeys/features/vault/domain/repositories/vault_repository.dart';
@@ -87,6 +91,10 @@ void main() {
     sl.registerSingleton<VaultRepository>(fakeRepository);
     sl.registerLazySingleton<CryptoService>(CryptoServiceImpl.new);
     sl.registerLazySingleton(() => PasswordGeneratorService(cryptoService: sl()));
+    SharedPreferences.setMockInitialValues({});
+    sl.registerSingleton<SettingsRepository>(
+      SettingsRepositoryImpl(preferences: await SharedPreferences.getInstance()),
+    );
   });
 
   Widget wrap(Widget child) => MaterialApp(theme: AppTheme.dark, home: child);
@@ -239,15 +247,15 @@ void main() {
     expect(find.text('Generar contraseña'), findsOneWidget);
   });
 
-  testWidgets('tapping Ajustes shows a coming-soon message without calling onLock', (tester) async {
+  testWidgets('tapping Ajustes opens the settings screen without calling onLock', (tester) async {
     var locked = false;
     await tester.pumpWidget(wrap(VaultPage(onLock: () => locked = true)));
 
     await tester.tap(find.text('Ajustes'));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(locked, isFalse);
-    expect(find.text('Disponible próximamente'), findsOneWidget);
+    expect(find.text('SEGURIDAD'), findsOneWidget);
   });
 
   group('search (img/07_search.png)', () {
