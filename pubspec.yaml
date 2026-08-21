@@ -53,6 +53,7 @@ dependencies:
   equatable: ^2.1.0
   cryptography_flutter: ^2.3.4
   shared_preferences: ^2.5.5
+  file_selector: ^1.1.0
 
 dev_dependencies:
   flutter_test:

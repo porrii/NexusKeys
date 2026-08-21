@@ -5,6 +5,7 @@ import '../../../../core/di/service_locator.dart';
 import '../../../../core/security/secure_bytes.dart';
 import '../../domain/entities/auth_result.dart';
 import '../../domain/repositories/auth_repository.dart';
+import '../../../backup/presentation/pages/import_export_page.dart';
 import '../../../vault/domain/repositories/vault_repository.dart';
 import '../../../vault/presentation/pages/vault_page.dart';
 import 'create_master_password_page.dart';
@@ -120,9 +121,19 @@ class _AuthGatePageState extends State<AuthGatePage> {
     });
   }
 
-  void _openExistingVaultStub() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Importar una bóveda existente estará disponible próximamente.')),
+  void _openImportExisting() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ImportExportPage(
+          onImportComplete: () {
+            Navigator.of(context).pop();
+            // A vault now exists where there wasn't one — re-check rather
+            // than assuming .lock, in case the import itself failed to
+            // leave a well-formed auth header.
+            _checkVaultStatus();
+          },
+        ),
+      ),
     );
   }
 
@@ -132,7 +143,7 @@ class _AuthGatePageState extends State<AuthGatePage> {
       _Screen.loading => const Scaffold(body: Center(child: CircularProgressIndicator())),
       _Screen.welcome => WelcomePage(
           onCreateVault: _openCreatePasswordPage,
-          onOpenExistingVault: _openExistingVaultStub,
+          onOpenExistingVault: _openImportExisting,
         ),
       _Screen.lock => LockScreenPage(
           isUnlocking: _isBusy,

@@ -36,8 +36,17 @@ class VaultSession {
 
   Future<void> unlock(Uint8List key) async {
     _database?.close();
+    _database = VaultDatabase.open(await _resolvePath(), key);
+  }
+
+  /// The vault database's location on disk — for the backup feature, which
+  /// needs to read/replace the raw (already-encrypted) file directly rather
+  /// than through a live connection.
+  Future<File> resolveDatabaseFile() async => File(await _resolvePath());
+
+  Future<String> _resolvePath() async {
     final dir = overrideDirectory ?? await getApplicationSupportDirectory();
-    _database = VaultDatabase.open('${dir.path}${Platform.pathSeparator}$_fileName', key);
+    return '${dir.path}${Platform.pathSeparator}$_fileName';
   }
 
   /// Re-encrypts the open database under [newKey] — call this whenever the

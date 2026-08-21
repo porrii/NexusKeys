@@ -1,6 +1,7 @@
 import 'package:get_it/get_it.dart';
 
 import '../../features/auth/di/auth_dependencies.dart';
+import '../../features/backup/di/backup_dependencies.dart';
 import '../../features/generator/di/generator_dependencies.dart';
 import '../../features/settings/di/settings_dependencies.dart';
 import '../../features/vault/di/vault_dependencies.dart';
@@ -20,5 +21,6 @@ Future<void> setupServiceLocator() async {
   configureAuthDependencies(sl);
   configureVaultDependencies(sl);
   configureGeneratorDependencies(sl);
+  configureBackupDependencies(sl);
   await configureSettingsDependencies(sl);
 }

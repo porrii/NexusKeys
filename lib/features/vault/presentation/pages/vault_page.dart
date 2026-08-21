@@ -4,6 +4,7 @@ import '../../../../core/di/service_locator.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/vault_item.dart';
 import '../../domain/repositories/vault_repository.dart';
+import '../../../backup/presentation/pages/import_export_page.dart';
 import '../../../generator/presentation/pages/generator_page.dart';
 import '../../../settings/presentation/pages/settings_page.dart';
 import '../widgets/vault_item_tile.dart';
@@ -171,13 +172,41 @@ class _VaultPageState extends State<VaultPage> {
       ),
       drawer: Drawer(
         child: SafeArea(
-          child: ListTile(
-            leading: const Icon(Icons.lock_outlined),
-            title: const Text('Bloquear bóveda'),
-            onTap: () {
-              Navigator.of(context).pop();
-              widget.onLock?.call();
-            },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.lock_outlined),
+                title: const Text('Bloquear bóveda'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  widget.onLock?.call();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.import_export_outlined),
+                title: const Text('Importar / Exportar'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ImportExportPage(
+                        onImportComplete: () {
+                          // A restore just replaced the auth header this
+                          // session was unlocked with, so every pushed
+                          // route (this one, VaultPage) has to go — only
+                          // AuthGatePage's own re-check of isVaultInitialized
+                          // is valid now, and it needs to be visible, not
+                          // buried under routes for a vault that's gone.
+                          Navigator.of(context).popUntil((route) => route.isFirst);
+                          widget.onLock?.call();
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
         ),
       ),
