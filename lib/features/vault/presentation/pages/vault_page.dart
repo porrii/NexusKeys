@@ -6,12 +6,23 @@ import '../../domain/entities/vault_item.dart';
 import '../../domain/repositories/vault_repository.dart';
 import '../../../backup/presentation/pages/import_export_page.dart';
 import '../../../generator/presentation/pages/generator_page.dart';
+import '../../../settings/presentation/pages/categories_page.dart';
 import '../../../settings/presentation/pages/settings_page.dart';
+import '../../../settings/presentation/pages/tags_page.dart';
+import '../../../settings/presentation/pages/trash_page.dart';
+import '../widgets/vault_detail_pane.dart';
 import '../widgets/vault_item_tile.dart';
+import '../widgets/vault_sidebar.dart';
 import 'edit_vault_item_page.dart';
 import 'item_details_page.dart';
 
 enum _VaultFilter { all, favorites, recent }
+
+/// Below this width, VaultPage keeps its mobile Scaffold (drawer, bottom
+/// nav, filter chips, pushed detail page) exactly as before. At or above
+/// it, img/13_tablet.png and img/14_windows.png's persistent sidebar +
+/// list + inline detail layout takes over instead.
+const double kVaultWideBreakpoint = 700;
 
 /// Reproduces img/03_vault.png, backed by the real encrypted database.
 class VaultPage extends StatefulWidget {
@@ -34,6 +45,12 @@ class _VaultPageState extends State<VaultPage> {
   _VaultFilter _filter = _VaultFilter.all;
   bool _isSearching = false;
   String _searchQuery = '';
+
+  // Wide-layout only (see kVaultWideBreakpoint) — mobile never touches
+  // these, since it pushes ItemDetailsPage as a route instead of keeping a
+  // selection inline.
+  VaultSidebarSection _sidebarSection = VaultSidebarSection.vault;
+  int? _selectedItemId;
 
   @override
   void dispose() {
@@ -134,8 +151,148 @@ class _VaultPageState extends State<VaultPage> {
     );
   }
 
+  VaultItem? _resolveSelected(List<VaultItem> items) {
+    final id = _selectedItemId;
+    if (id == null) return null;
+    for (final item in items) {
+      if (item.id == id) return item;
+    }
+    return null;
+  }
+
+  void _onSidebarSelect(VaultSidebarSection section) {
+    switch (section) {
+      case VaultSidebarSection.vault:
+        setState(() {
+          _sidebarSection = section;
+          _filter = _VaultFilter.all;
+        });
+      case VaultSidebarSection.favorites:
+        setState(() {
+          _sidebarSection = section;
+          _filter = _VaultFilter.favorites;
+        });
+      case VaultSidebarSection.recent:
+        setState(() {
+          _sidebarSection = section;
+          _filter = _VaultFilter.recent;
+        });
+      case VaultSidebarSection.categories:
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CategoriesPage()));
+      case VaultSidebarSection.tags:
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TagsPage()));
+      case VaultSidebarSection.trash:
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TrashPage()));
+      case VaultSidebarSection.settings:
+        _openSettings();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= kVaultWideBreakpoint) {
+          return _buildWideLayout(context);
+        }
+        return _buildMobileScaffold(context);
+      },
+    );
+  }
+
+  Widget _buildWideLayout(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      body: Row(
+        children: [
+          VaultSidebar(
+            selected: _sidebarSection,
+            onSelect: _onSidebarSelect,
+            onCreateItem: _openCreateItem,
+            onLock: () => widget.onLock?.call(),
+          ),
+          SizedBox(
+            width: 340,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search),
+                      hintText: 'Buscar en la bóveda',
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: StreamBuilder<List<VaultItem>>(
+                    initialData: _repository.currentItems,
+                    stream: _repository.itemsStream,
+                    builder: (context, snapshot) {
+                      final source = snapshot.data ?? const <VaultItem>[];
+                      final items =
+                          _searchQuery.trim().isEmpty ? _applyFilter(source) : _applySearch(source);
+
+                      if (items.isEmpty) {
+                        return Center(
+                          child: Text(
+                            _searchQuery.trim().isEmpty ? 'Tu bóveda está vacía' : 'Sin resultados',
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        );
+                      }
+
+                      return ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                        itemCount: items.length,
+                        itemBuilder: (context, index) {
+                          final item = items[index];
+                          return VaultItemTile(
+                            title: item.title,
+                            subtitle: item.username ?? item.url ?? item.category ?? '',
+                            avatarColor: item.type.color,
+                            isFavorite: item.isFavorite,
+                            onTap: () => setState(() => _selectedItemId = item.id),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          VerticalDivider(width: 1, color: theme.dividerColor),
+          Expanded(
+            child: StreamBuilder<List<VaultItem>>(
+              initialData: _repository.currentItems,
+              stream: _repository.itemsStream,
+              builder: (context, snapshot) {
+                final items = snapshot.data ?? const <VaultItem>[];
+                final selected = _resolveSelected(items);
+                return VaultDetailPane(
+                  item: selected,
+                  onToggleFavorite: selected == null
+                      ? null
+                      : (value) {
+                          final id = selected.id;
+                          if (id != null) _repository.setFavorite(id, value);
+                        },
+                  onEdit: selected == null ? null : () => _openEditAndReturn(selected),
+                  onDelete: selected == null ? null : () => _deleteWithUndo(selected),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileScaffold(BuildContext context) {
     final theme = Theme.of(context);
 
     return Scaffold(

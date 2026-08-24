@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../../core/security/password_strength.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/widgets/password_strength_indicator.dart';
 import '../../domain/entities/vault_item.dart';
+import '../widgets/item_field_card.dart';
 
 /// Read-only view of a vault item — reproduces img/04_item_details.png.
 /// "Editar" hands off to [EditVaultItemPage] (img/05_new_item.png's form,
@@ -131,21 +130,21 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
             ),
             const SizedBox(height: 24),
             if (item.username case final username?)
-              _FieldCard(
+              ItemFieldCard(
                 label: 'Usuario',
                 child: Text(username, style: theme.textTheme.bodyLarge),
                 onCopy: () => _copyToClipboard('Usuario', username),
               ),
             if (item.password case final password?) ...[
               const SizedBox(height: 14),
-              _PasswordFieldCard(
+              ItemPasswordFieldCard(
                 password: password,
                 onCopy: () => _copyToClipboard('Contraseña', password),
               ),
             ],
             if (item.url case final url?) ...[
               const SizedBox(height: 14),
-              _FieldCard(
+              ItemFieldCard(
                 label: 'Sitio web',
                 icon: Icons.language,
                 child: Text(
@@ -156,11 +155,11 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
             ],
             if (item.notes case final notes?) ...[
               const SizedBox(height: 14),
-              _FieldCard(label: 'Notas', child: Text(notes, style: theme.textTheme.bodyLarge)),
+              ItemFieldCard(label: 'Notas', child: Text(notes, style: theme.textTheme.bodyLarge)),
             ],
             if (item.tags.isNotEmpty) ...[
               const SizedBox(height: 14),
-              _FieldCard(
+              ItemFieldCard(
                 label: 'Etiquetas',
                 child: Wrap(
                   spacing: 8,
@@ -195,104 +194,6 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                 ),
               ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FieldCard extends StatelessWidget {
-  const _FieldCard({required this.label, required this.child, this.icon, this.onCopy});
-
-  final String label;
-  final Widget child;
-  final IconData? icon;
-  final VoidCallback? onCopy;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            if (icon != null) ...[
-              Icon(icon, size: 20, color: theme.textTheme.bodyMedium?.color),
-              const SizedBox(width: 12),
-            ],
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(label, style: theme.textTheme.bodySmall),
-                  const SizedBox(height: 4),
-                  child,
-                ],
-              ),
-            ),
-            if (onCopy != null)
-              IconButton(icon: const Icon(Icons.copy_outlined), onPressed: onCopy),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PasswordFieldCard extends StatefulWidget {
-  const _PasswordFieldCard({required this.password, this.onCopy});
-
-  final String password;
-  final VoidCallback? onCopy;
-
-  @override
-  State<_PasswordFieldCard> createState() => _PasswordFieldCardState();
-}
-
-class _PasswordFieldCardState extends State<_PasswordFieldCard> {
-  bool _revealed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final displayed = _revealed ? widget.password : '•' * widget.password.length;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('Contraseña', style: theme.textTheme.bodySmall),
-                      const SizedBox(height: 4),
-                      Text(
-                        displayed,
-                        style: theme.textTheme.bodyLarge?.copyWith(letterSpacing: 1.2),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(_revealed ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                  onPressed: () => setState(() => _revealed = !_revealed),
-                ),
-                if (widget.onCopy != null)
-                  IconButton(icon: const Icon(Icons.copy_outlined), onPressed: widget.onCopy),
-              ],
-            ),
-            const SizedBox(height: 6),
-            PasswordStrengthIndicator(strength: evaluatePasswordStrength(widget.password)),
           ],
         ),
       ),

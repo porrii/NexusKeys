@@ -202,7 +202,10 @@ void main() {
 
   // ListView.builder only builds items within the viewport, and the default
   // test surface is too short to fit all six sample rows below the app bar,
-  // search field and filter chips.
+  // search field and filter chips. Its 400-wide, phone-shaped size also
+  // keeps every test in this file below kVaultWideBreakpoint, since they
+  // all exercise the mobile Scaffold specifically — the wide layout has
+  // its own test file.
   void useTallViewport(WidgetTester tester) {
     tester.view.physicalSize = const Size(400, 1400);
     tester.view.devicePixelRatio = 1.0;
@@ -234,6 +237,7 @@ void main() {
   });
 
   testWidgets('shows an empty-vault message when there are no items', (tester) async {
+    useTallViewport(tester);
     await tester.pumpWidget(wrap(const VaultPage()));
     await tester.pumpAndSettle();
 
@@ -241,6 +245,7 @@ void main() {
   });
 
   testWidgets('the Favoritos chip filters the list down to favorite items only', (tester) async {
+    useTallViewport(tester);
     fakeRepository.seed(sampleItems());
 
     await tester.pumpWidget(wrap(const VaultPage()));
@@ -253,6 +258,7 @@ void main() {
   });
 
   testWidgets('the FAB opens the create-item form, and saving adds it to the list', (tester) async {
+    useTallViewport(tester);
     await tester.pumpWidget(wrap(const VaultPage()));
     await tester.pumpAndSettle();
 
@@ -269,6 +275,7 @@ void main() {
   });
 
   testWidgets('tapping an item opens its read-only details (img/04_item_details.png)', (tester) async {
+    useTallViewport(tester);
     fakeRepository.seed([item(title: 'GitHub', username: 'ivan_dev')]);
 
     await tester.pumpWidget(wrap(const VaultPage()));
@@ -282,6 +289,7 @@ void main() {
   });
 
   testWidgets('editing from the details screen persists the change through the repository', (tester) async {
+    useTallViewport(tester);
     fakeRepository.seed([item(title: 'GitHub', username: 'ivan_dev')]);
 
     await tester.pumpWidget(wrap(const VaultPage()));
@@ -300,6 +308,7 @@ void main() {
   });
 
   testWidgets('the drawer\'s "Bloquear bóveda" entry calls onLock', (tester) async {
+    useTallViewport(tester);
     var locked = false;
     await tester.pumpWidget(wrap(VaultPage(onLock: () => locked = true)));
 
@@ -324,6 +333,7 @@ void main() {
   });
 
   testWidgets('tapping Ajustes opens the settings screen without calling onLock', (tester) async {
+    useTallViewport(tester);
     var locked = false;
     await tester.pumpWidget(wrap(VaultPage(onLock: () => locked = true)));
 

@@ -179,6 +179,12 @@ void main() {
   });
 
   testWidgets('locking from the vault screen drawer returns to the lock screen', (tester) async {
+    // VaultPage's drawer only exists below kVaultWideBreakpoint — the
+    // default test surface is wide enough to render its wide sidebar
+    // layout instead, which has no "Open navigation menu" drawer at all.
+    tester.view.physicalSize = const Size(400, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     fakeRepository.vaultInitialized = true;
     fakeRepository.configuredPassword = 'the-real-password';
 
