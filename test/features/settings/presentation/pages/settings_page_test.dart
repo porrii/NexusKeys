@@ -188,6 +188,7 @@ void main() {
     expect(find.text('Idioma'), findsOneWidget);
     expect(find.text('Español'), findsOneWidget);
     expect(find.text('Gestionar categorías'), findsOneWidget);
+    expect(find.text('Etiquetas'), findsOneWidget);
     expect(find.text('Papelera'), findsOneWidget);
   });
 
@@ -300,5 +301,15 @@ void main() {
 
     expect(find.text('Todas'), findsOneWidget);
     expect(find.text('Nueva categoría'), findsOneWidget);
+  });
+
+  testWidgets('Etiquetas opens the tags screen', (tester) async {
+    useTallViewport(tester);
+    await tester.pumpWidget(wrap(const SettingsPage()));
+
+    await tester.tap(find.text('Etiquetas'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ningún elemento tiene etiquetas todavía'), findsOneWidget);
   });
 }

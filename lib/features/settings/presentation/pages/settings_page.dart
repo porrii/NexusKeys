@@ -13,6 +13,7 @@ import 'auto_lock_settings_page.dart';
 import 'categories_page.dart';
 import 'change_master_password_page.dart';
 import 'language_settings_page.dart';
+import 'tags_page.dart';
 import 'theme_settings_page.dart';
 import 'trash_page.dart';
 
@@ -172,6 +173,7 @@ class _SettingsPageState extends State<SettingsPage> {
               title: 'Gestionar categorías',
               onTap: () => _push(const CategoriesPage()),
             ),
+            _SettingsTile(title: 'Etiquetas', onTap: () => _push(const TagsPage())),
             _SettingsTile(title: 'Papelera', onTap: () => _push(const TrashPage())),
           ],
         ),
