@@ -4,7 +4,11 @@ import '../../../core/security/crypto_service.dart';
 import '../../../core/security/crypto_service_impl.dart';
 import '../data/datasources/auth_local_data_source.dart';
 import '../data/repositories/auth_repository_impl.dart';
+import '../data/services/biometric_service_impl.dart';
+import '../data/services/secure_vault_key_store.dart';
 import '../domain/repositories/auth_repository.dart';
+import '../domain/services/biometric_service.dart';
+import '../domain/services/vault_key_store.dart';
 
 /// Registers the auth feature's dependencies into [sl]. Called once from
 /// [setupServiceLocator] during app startup.
@@ -17,5 +21,7 @@ void configureAuthDependencies(GetIt sl) {
         cryptoService: sl(),
         localDataSource: sl(),
       ),
-    );
+    )
+    ..registerLazySingleton<BiometricService>(BiometricServiceImpl.new)
+    ..registerLazySingleton<VaultKeyStore>(SecureVaultKeyStore.new);
 }

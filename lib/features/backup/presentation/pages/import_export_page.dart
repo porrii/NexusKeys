@@ -1,9 +1,8 @@
-import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/widgets/app_password_field.dart';
@@ -60,25 +59,22 @@ class _ImportExportPageState extends State<ImportExportPage> {
     }
   }
 
-  /// Windows gets a real "save as" dialog; file_selector doesn't offer one
-  /// on Android, so the export goes to the app's own documents directory
-  /// there instead — reachable again through this same screen's Importar
-  /// flow, if not yet through a system file browser.
+  /// file_selector's own save dialog (`getSaveLocation`) only exists on
+  /// Windows/macOS/Linux — Android has no equivalent there, so this uses
+  /// file_picker instead, which writes [bytes] through Android's Storage
+  /// Access Framework on Android and a native save dialog everywhere else,
+  /// giving the user a real "choose where to save" prompt on every
+  /// platform NexusKeys ships on.
   Future<String?> _saveExport(Uint8List bytes, String fileName) async {
-    if (Platform.isWindows) {
-      final location = await getSaveLocation(
-        suggestedName: fileName,
-        acceptedTypeGroups: const [_typeGroup],
-      );
-      if (location == null) return null;
-      await XFile.fromData(bytes).saveTo(location.path);
-      return location.path;
-    }
-
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}${Platform.pathSeparator}$fileName');
-    await file.writeAsBytes(bytes);
-    return file.path;
+    final uri = await FilePicker.saveFile(
+      fileName: fileName,
+      bytes: bytes,
+      dialogTitle: 'Guardar backup de NexusKeys',
+      type: FileType.custom,
+      allowedExtensions: const ['nexus'],
+    );
+    if (uri == null) return null; // user cancelled
+    return uri.scheme == 'file' ? uri.toFilePath() : uri.toString();
   }
 
   Future<void> _import() async {

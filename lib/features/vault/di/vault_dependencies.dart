@@ -1,8 +1,11 @@
 import 'package:get_it/get_it.dart';
 
 import '../../../core/database/vault_session.dart';
+import '../data/datasources/category_local_data_source.dart';
 import '../data/datasources/vault_local_data_source.dart';
+import '../data/repositories/category_repository_impl.dart';
 import '../data/repositories/vault_repository_impl.dart';
+import '../domain/repositories/category_repository.dart';
 import '../domain/repositories/vault_repository.dart';
 
 /// Registers the vault feature's dependencies into [sl].
@@ -17,5 +20,9 @@ void configureVaultDependencies(GetIt sl) {
     ..registerLazySingleton(() => VaultLocalDataSource(vaultSession: sl()))
     ..registerLazySingleton<VaultRepository>(
       () => VaultRepositoryImpl(dataSource: sl()),
+    )
+    ..registerLazySingleton(() => CategoryLocalDataSource(vaultSession: sl()))
+    ..registerLazySingleton<CategoryRepository>(
+      () => CategoryRepositoryImpl(dataSource: sl()),
     );
 }

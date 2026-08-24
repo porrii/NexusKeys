@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/di/service_locator.dart';
+import '../../../../core/security/secure_bytes.dart';
+import '../../../../core/widgets/app_password_field.dart';
+import '../../../auth/domain/entities/auth_result.dart';
+import '../../../auth/domain/repositories/auth_repository.dart';
+import '../../../auth/domain/services/biometric_service.dart';
+import '../../../auth/domain/services/vault_key_store.dart';
 import '../../domain/entities/app_settings.dart';
 import '../../domain/repositories/settings_repository.dart';
 import 'auto_lock_settings_page.dart';
+import 'categories_page.dart';
 import 'change_master_password_page.dart';
 import 'language_settings_page.dart';
 import 'theme_settings_page.dart';
@@ -19,6 +26,9 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   final SettingsRepository _settings = sl<SettingsRepository>();
+  final BiometricService _biometricService = sl<BiometricService>();
+  final VaultKeyStore _vaultKeyStore = sl<VaultKeyStore>();
+  final AuthRepository _authRepository = sl<AuthRepository>();
 
   static const _themeLabels = {
     AppThemeMode.light: 'Claro',
@@ -27,15 +37,91 @@ class _SettingsPageState extends State<SettingsPage> {
     AppThemeMode.system: 'Seguir sistema',
   };
 
-  void _showComingSoon() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Disponible próximamente')),
-    );
-  }
-
   Future<void> _push(Widget page) async {
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
     if (mounted) setState(() {});
+  }
+
+  /// Disabling just clears the stored key. Enabling needs the master
+  /// password re-entered first: Settings never has the raw vault key lying
+  /// around (it's wiped right after the vault is unlocked), so this is the
+  /// only place that can derive a fresh copy to hand to [VaultKeyStore].
+  Future<void> _toggleBiometric() async {
+    final available = await _biometricService.isDeviceSupported();
+    if (!mounted) return;
+    if (!available) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Este dispositivo no admite autenticación biométrica.')),
+      );
+      return;
+    }
+
+    if (_settings.current.biometricEnabled) {
+      await _vaultKeyStore.clear();
+      await _settings.setBiometricEnabled(false);
+      if (mounted) setState(() {});
+      return;
+    }
+
+    final password = await _promptForPassword();
+    if (password == null || !mounted) return;
+
+    final result = await _authRepository.verifyMasterPassword(password);
+    if (!mounted) return;
+    if (result is! AuthSuccess) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Contraseña incorrecta.')),
+      );
+      return;
+    }
+
+    final vaultKey = result.vaultKey;
+    // VaultKeyStore.save writes to a Keystore entry that requires user
+    // authentication to even encrypt into, so this alone is what shows the
+    // native biometric prompt — no separate BiometricService call needed
+    // here, that would just prompt the user twice.
+    bool saved = false;
+    try {
+      await _vaultKeyStore.save(vaultKey);
+      saved = true;
+    } on Exception {
+      saved = false;
+    } finally {
+      wipe(vaultKey);
+    }
+    if (!mounted) return;
+    if (!saved) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo activar el desbloqueo biométrico.')),
+      );
+      return;
+    }
+
+    await _settings.setBiometricEnabled(true);
+    if (mounted) setState(() {});
+  }
+
+  Future<String?> _promptForPassword() {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirma tu contraseña maestra'),
+        content: AppPasswordField(
+          controller: controller,
+          hintText: 'Contraseña maestra',
+          autofocus: true,
+          onSubmitted: (value) => Navigator.of(context).pop(value),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(controller.text),
+            child: const Text('Continuar'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -61,7 +147,7 @@ class _SettingsPageState extends State<SettingsPage> {
             _SettingsTile(
               title: 'Autenticación biométrica',
               value: settings.biometricEnabled ? 'Activada' : 'Desactivada',
-              onTap: _showComingSoon,
+              onTap: _toggleBiometric,
             ),
             _SettingsSwitchTile(
               title: 'Bloquear al cerrar',
@@ -82,7 +168,10 @@ class _SettingsPageState extends State<SettingsPage> {
               value: 'Español',
               onTap: () => _push(const LanguageSettingsPage()),
             ),
-            _SettingsTile(title: 'Gestionar categorías', onTap: _showComingSoon),
+            _SettingsTile(
+              title: 'Gestionar categorías',
+              onTap: () => _push(const CategoriesPage()),
+            ),
             _SettingsTile(title: 'Papelera', onTap: () => _push(const TrashPage())),
           ],
         ),

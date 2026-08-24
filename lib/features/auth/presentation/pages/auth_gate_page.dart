@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/database/vault_session.dart';
@@ -5,9 +7,14 @@ import '../../../../core/di/service_locator.dart';
 import '../../../../core/security/secure_bytes.dart';
 import '../../domain/entities/auth_result.dart';
 import '../../domain/repositories/auth_repository.dart';
+import '../../domain/services/biometric_service.dart';
+import '../../domain/services/vault_key_store.dart';
 import '../../../backup/presentation/pages/import_export_page.dart';
+import '../../../settings/domain/repositories/settings_repository.dart';
+import '../../../vault/domain/repositories/category_repository.dart';
 import '../../../vault/domain/repositories/vault_repository.dart';
 import '../../../vault/presentation/pages/vault_page.dart';
+import 'biometric_prompt_page.dart';
 import 'create_master_password_page.dart';
 import 'lock_screen_page.dart';
 import 'welcome_page.dart';
@@ -36,9 +43,13 @@ class AuthGatePage extends StatefulWidget {
 class _AuthGatePageState extends State<AuthGatePage> {
   final AuthRepository _authRepository = sl<AuthRepository>();
   final VaultSession _vaultSession = sl<VaultSession>();
+  final BiometricService _biometricService = sl<BiometricService>();
+  final VaultKeyStore _vaultKeyStore = sl<VaultKeyStore>();
+  final SettingsRepository _settings = sl<SettingsRepository>();
 
   _Screen _screen = _Screen.loading;
   bool _isBusy = false;
+  bool _biometricAvailable = false;
   String? _lockScreenError;
 
   @override
@@ -49,8 +60,15 @@ class _AuthGatePageState extends State<AuthGatePage> {
 
   Future<void> _checkVaultStatus() async {
     final initialized = await _authRepository.isVaultInitialized();
+    final biometricAvailable = initialized &&
+        _settings.current.biometricEnabled &&
+        await _vaultKeyStore.hasStoredKey &&
+        await _biometricService.isDeviceSupported();
     if (!mounted) return;
-    setState(() => _screen = initialized ? _Screen.lock : _Screen.welcome);
+    setState(() {
+      _screen = initialized ? _Screen.lock : _Screen.welcome;
+      _biometricAvailable = biometricAvailable;
+    });
   }
 
   void _openCreatePasswordPage() {
@@ -70,6 +88,7 @@ class _AuthGatePageState extends State<AuthGatePage> {
         await _vaultSession.unlock(vaultKey);
         wipe(vaultKey);
         await sl<VaultRepository>().reload();
+        await sl<CategoryRepository>().reload();
         if (!mounted) return;
         Navigator.of(context).pop();
         setState(() => _screen = _Screen.vault);
@@ -95,6 +114,7 @@ class _AuthGatePageState extends State<AuthGatePage> {
         await _vaultSession.unlock(vaultKey);
         wipe(vaultKey);
         await sl<VaultRepository>().reload();
+        await sl<CategoryRepository>().reload();
         if (!mounted) return;
         setState(() {
           _isBusy = false;
@@ -113,12 +133,29 @@ class _AuthGatePageState extends State<AuthGatePage> {
     }
   }
 
+  Future<void> _handleBiometricUnlock() async {
+    final vaultKey = await Navigator.of(context).push<Uint8List>(
+      MaterialPageRoute(builder: (_) => const BiometricPromptPage()),
+    );
+    if (vaultKey == null || !mounted) return;
+
+    await _vaultSession.unlock(vaultKey);
+    wipe(vaultKey);
+    await sl<VaultRepository>().reload();
+    if (!mounted) return;
+    setState(() => _screen = _Screen.vault);
+  }
+
   void _lockVault() {
     _vaultSession.lock();
     setState(() {
       _screen = _Screen.lock;
       _lockScreenError = null;
     });
+    // Re-check in case biometric unlock was just enabled/disabled from
+    // Settings during this session — _biometricAvailable was only computed
+    // once, at cold start.
+    _checkVaultStatus();
   }
 
   void _openImportExisting() {
@@ -149,6 +186,8 @@ class _AuthGatePageState extends State<AuthGatePage> {
           isUnlocking: _isBusy,
           errorText: _lockScreenError,
           onUnlock: _handleUnlock,
+          biometricAvailable: _biometricAvailable,
+          onBiometricUnlock: _biometricAvailable ? _handleBiometricUnlock : null,
         ),
       _Screen.vault => VaultPage(onLock: _lockVault),
     };

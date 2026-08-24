@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,13 +9,84 @@ import 'package:nexuskeys/core/di/service_locator.dart';
 import 'package:nexuskeys/core/security/crypto_service.dart';
 import 'package:nexuskeys/core/security/crypto_service_impl.dart';
 import 'package:nexuskeys/core/theme/app_theme.dart';
+import 'package:nexuskeys/features/auth/domain/entities/auth_result.dart';
+import 'package:nexuskeys/features/auth/domain/repositories/auth_repository.dart';
+import 'package:nexuskeys/features/auth/domain/services/biometric_service.dart';
+import 'package:nexuskeys/features/auth/domain/services/vault_key_store.dart';
 import 'package:nexuskeys/features/generator/domain/services/password_generator_service.dart';
 import 'package:nexuskeys/features/settings/data/repositories/settings_repository_impl.dart';
 import 'package:nexuskeys/features/settings/domain/repositories/settings_repository.dart';
+import 'package:nexuskeys/features/vault/domain/entities/category.dart';
 import 'package:nexuskeys/features/vault/domain/entities/vault_item.dart';
 import 'package:nexuskeys/features/vault/domain/entities/vault_item_type.dart';
+import 'package:nexuskeys/features/vault/domain/repositories/category_repository.dart';
 import 'package:nexuskeys/features/vault/domain/repositories/vault_repository.dart';
 import 'package:nexuskeys/features/vault/presentation/pages/vault_page.dart';
+
+/// Bare stubs — VaultPage's own tests never open the biometric-enabling
+/// flow inside SettingsPage, they just need SettingsPage to build at all
+/// (it reads these via the service locator in its State's field
+/// initializers). Real behaviour is covered by settings_page_test.dart.
+class _StubBiometricService implements BiometricService {
+  @override
+  Future<bool> isDeviceSupported() async => false;
+
+  @override
+  Future<bool> authenticate({required String reason}) async => false;
+}
+
+class _StubVaultKeyStore implements VaultKeyStore {
+  @override
+  Future<bool> get hasStoredKey async => false;
+
+  @override
+  Future<void> save(Uint8List vaultKey) async {}
+
+  @override
+  Future<Uint8List?> read() async => null;
+
+  @override
+  Future<void> clear() async {}
+}
+
+class _StubAuthRepository implements AuthRepository {
+  @override
+  Future<bool> isVaultInitialized() async => true;
+
+  @override
+  Future<AuthResult> setupMasterPassword(String password) async => AuthSuccess(Uint8List(32));
+
+  @override
+  Future<AuthResult> verifyMasterPassword(String password) async =>
+      const AuthFailure(AuthFailureReason.wrongPassword);
+
+  @override
+  Future<AuthResult> changeMasterPassword({
+    required String currentPassword,
+    required String newPassword,
+  }) =>
+      throw UnimplementedError();
+}
+
+class _StubCategoryRepository implements CategoryRepository {
+  @override
+  List<Category> currentCategories = const [];
+
+  @override
+  Stream<List<Category>> get categoriesStream => const Stream.empty();
+
+  @override
+  Future<Category> create(String name) async => Category(name: name, createdAt: DateTime.now());
+
+  @override
+  Future<void> delete(int id) async {}
+
+  @override
+  Future<void> reload() async {}
+
+  @override
+  void dispose() {}
+}
 
 /// Hand-written fake instead of a mocking framework, mirroring
 /// FakeAuthRepository in auth_gate_page_test.dart. Its own correctness
@@ -95,6 +167,10 @@ void main() {
     sl.registerSingleton<SettingsRepository>(
       SettingsRepositoryImpl(preferences: await SharedPreferences.getInstance()),
     );
+    sl.registerSingleton<BiometricService>(_StubBiometricService());
+    sl.registerSingleton<VaultKeyStore>(_StubVaultKeyStore());
+    sl.registerSingleton<AuthRepository>(_StubAuthRepository());
+    sl.registerSingleton<CategoryRepository>(_StubCategoryRepository());
   });
 
   Widget wrap(Widget child) => MaterialApp(theme: AppTheme.dark, home: child);

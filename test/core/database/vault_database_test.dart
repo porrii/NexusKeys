@@ -35,6 +35,41 @@ void main() {
     expect(tables.length, 1);
   });
 
+  test('opening a new path creates the categories table', () {
+    final db = VaultDatabase.open(dbPath, key);
+    addTearDown(db.close);
+
+    final tables = db.raw.select(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='categories';",
+    );
+
+    expect(tables.length, 1);
+  });
+
+  test('a database left at schema version 1 gains the categories table on reopen', () {
+    // Simulates an install that predates the categories table: create just
+    // what version 1 had, and stamp user_version = 1 by hand rather than
+    // going through VaultDatabase.open (which would already create it).
+    final legacy = VaultDatabase.open(dbPath, key);
+    legacy.raw.execute(VaultSchema.createVaultItemsTable);
+    for (final index in VaultSchema.createIndices) {
+      legacy.raw.execute(index);
+    }
+    legacy.raw.execute('DROP TABLE IF EXISTS categories;');
+    legacy.raw.execute('PRAGMA user_version = 1;');
+    legacy.close();
+
+    final migrated = VaultDatabase.open(dbPath, key);
+    addTearDown(migrated.close);
+
+    final tables = migrated.raw.select(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='categories';",
+    );
+    final version = migrated.raw.select('PRAGMA user_version;').first['user_version'] as int;
+    expect(tables.length, 1);
+    expect(version, VaultSchema.version);
+  });
+
   test('sets user_version to the current schema version on creation', () {
     final db = VaultDatabase.open(dbPath, key);
     addTearDown(db.close);
