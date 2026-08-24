@@ -52,6 +52,28 @@ class _VaultPageState extends State<VaultPage> {
   VaultSidebarSection _sidebarSection = VaultSidebarSection.vault;
   int? _selectedItemId;
 
+  // Mobile-layout only: Bóveda/Generador/Ajustes each get their own nested
+  // Navigator so pushing within one (item details, an edit form, a
+  // settings sub-page, ...) only covers that tab's content — the outer
+  // Scaffold's bottomNavigationBar, built once around all three, is never
+  // part of any of their route stacks and so never disappears.
+  int _bottomNavIndex = 0;
+  final _vaultTabNavigatorKey = GlobalKey<NavigatorState>();
+  final _generatorTabNavigatorKey = GlobalKey<NavigatorState>();
+  final _settingsTabNavigatorKey = GlobalKey<NavigatorState>();
+
+  List<GlobalKey<NavigatorState>> get _tabNavigatorKeys =>
+      [_vaultTabNavigatorKey, _generatorTabNavigatorKey, _settingsTabNavigatorKey];
+
+  /// IndexedStack builds every child eagerly, every time — without this,
+  /// switching to Bóveda would also construct GeneratorPage and
+  /// SettingsPage (and touch every service they resolve via GetIt)
+  /// up front, whether or not the user ever visits those tabs. Once a tab
+  /// has been visited, its slot keeps rendering the real Navigator from
+  /// then on instead of reverting to the placeholder, so its state and
+  /// route stack survive being switched away from.
+  final Set<int> _visitedTabIndices = {0};
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -96,15 +118,14 @@ class _VaultPageState extends State<VaultPage> {
     });
   }
 
-  void _openGenerator() {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const GeneratorPage()));
-  }
-
-  void _openSettings() {
+  /// Kept for the wide layout's sidebar, which still pushes Ajustes over
+  /// itself (see VaultSidebar's doc comment) — mobile's Ajustes is a
+  /// persistent tab instead, so it never calls this.
+  void _openSettings(BuildContext context) {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsPage()));
   }
 
-  void _openCreateItem() {
+  void _openCreateItem(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => EditVaultItemPage(onSave: _repository.create),
@@ -112,7 +133,12 @@ class _VaultPageState extends State<VaultPage> {
     );
   }
 
-  void _openItemDetails(VaultItem item) {
+  /// [context] determines which Navigator the push (and any further pushes
+  /// — edit, and the delete-undo SnackBar's Scaffold) lands on: the caller
+  /// passes whatever context is a descendant of the Navigator it wants
+  /// covered — Bóveda's own nested one on mobile, the shared outer one on
+  /// the wide layout.
+  void _openItemDetails(BuildContext context, VaultItem item) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ItemDetailsPage(
@@ -121,9 +147,9 @@ class _VaultPageState extends State<VaultPage> {
             final id = item.id;
             if (id != null) _repository.setFavorite(id, value);
           },
-          onEdit: () => _openEditAndReturn(item),
+          onEdit: () => _openEditAndReturn(context, item),
           onDelete: () {
-            _deleteWithUndo(item);
+            _deleteWithUndo(context, item);
             Navigator.of(context).pop();
           },
         ),
@@ -131,7 +157,7 @@ class _VaultPageState extends State<VaultPage> {
     );
   }
 
-  Future<VaultItem?> _openEditAndReturn(VaultItem item) {
+  Future<VaultItem?> _openEditAndReturn(BuildContext context, VaultItem item) {
     return Navigator.of(context).push<VaultItem>(
       MaterialPageRoute(
         builder: (_) => EditVaultItemPage(existingItem: item, onSave: _repository.update),
@@ -139,7 +165,7 @@ class _VaultPageState extends State<VaultPage> {
     );
   }
 
-  void _deleteWithUndo(VaultItem item) {
+  void _deleteWithUndo(BuildContext context, VaultItem item) {
     final id = item.id;
     if (id == null) return;
     _repository.moveToTrash(id);
@@ -160,7 +186,7 @@ class _VaultPageState extends State<VaultPage> {
     return null;
   }
 
-  void _onSidebarSelect(VaultSidebarSection section) {
+  void _onSidebarSelect(BuildContext context, VaultSidebarSection section) {
     switch (section) {
       case VaultSidebarSection.vault:
         setState(() {
@@ -184,7 +210,7 @@ class _VaultPageState extends State<VaultPage> {
       case VaultSidebarSection.trash:
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TrashPage()));
       case VaultSidebarSection.settings:
-        _openSettings();
+        _openSettings(context);
     }
   }
 
@@ -208,8 +234,8 @@ class _VaultPageState extends State<VaultPage> {
         children: [
           VaultSidebar(
             selected: _sidebarSection,
-            onSelect: _onSidebarSelect,
-            onCreateItem: _openCreateItem,
+            onSelect: (section) => _onSidebarSelect(context, section),
+            onCreateItem: () => _openCreateItem(context),
             onLock: () => widget.onLock?.call(),
           ),
           SizedBox(
@@ -281,8 +307,8 @@ class _VaultPageState extends State<VaultPage> {
                           final id = selected.id;
                           if (id != null) _repository.setFavorite(id, value);
                         },
-                  onEdit: selected == null ? null : () => _openEditAndReturn(selected),
-                  onDelete: selected == null ? null : () => _deleteWithUndo(selected),
+                  onEdit: selected == null ? null : () => _openEditAndReturn(context, selected),
+                  onDelete: selected == null ? null : () => _deleteWithUndo(context, selected),
                 );
               },
             ),
@@ -292,7 +318,45 @@ class _VaultPageState extends State<VaultPage> {
     );
   }
 
+  /// The persistent shell: one bottomNavigationBar shared by all three
+  /// tabs, each with its own nested Navigator (see the GlobalKey fields
+  /// above) so none of their internal pushes ever cover it. IndexedStack
+  /// keeps every tab's widget subtree — and so its Navigator's route
+  /// stack — alive while hidden, rather than tearing it down on switch.
   Widget _buildMobileScaffold(BuildContext context) {
+    Widget tabSlot(int index, GlobalKey<NavigatorState> key, WidgetBuilder rootBuilder) {
+      if (!_visitedTabIndices.contains(index)) return const SizedBox.shrink();
+      return Navigator(key: key, onGenerateRoute: (settings) => MaterialPageRoute(builder: rootBuilder));
+    }
+
+    return Scaffold(
+      body: IndexedStack(
+        index: _bottomNavIndex,
+        children: [
+          tabSlot(0, _vaultTabNavigatorKey, _buildVaultTabRoot),
+          tabSlot(1, _generatorTabNavigatorKey, (_) => const GeneratorPage()),
+          tabSlot(2, _settingsTabNavigatorKey, (_) => const SettingsPage()),
+        ],
+      ),
+      bottomNavigationBar: _VaultBottomNav(
+        currentIndex: _bottomNavIndex,
+        onIndexSelected: (index) {
+          if (index == _bottomNavIndex) {
+            // Tapping the already-active tab again pops it back to its
+            // own root, mirroring how most bottom-nav apps behave.
+            _tabNavigatorKeys[index].currentState?.popUntil((route) => route.isFirst);
+          } else {
+            setState(() {
+              _bottomNavIndex = index;
+              _visitedTabIndices.add(index);
+            });
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildVaultTabRoot(BuildContext context) {
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -452,7 +516,7 @@ class _VaultPageState extends State<VaultPage> {
                       avatarColor: item.type.color,
                       isFavorite: item.isFavorite,
                       alwaysShowStar: _isSearching,
-                      onTap: () => _openItemDetails(item),
+                      onTap: () => _openItemDetails(context, item),
                     );
                   },
                 );
@@ -464,13 +528,9 @@ class _VaultPageState extends State<VaultPage> {
       floatingActionButton: _isSearching
           ? null
           : FloatingActionButton(
-              onPressed: _openCreateItem,
+              onPressed: () => _openCreateItem(context),
               child: const Icon(Icons.add),
             ),
-      bottomNavigationBar: _VaultBottomNav(
-        onGeneratorTap: _openGenerator,
-        onSettingsTap: _openSettings,
-      ),
     );
   }
 }
@@ -504,25 +564,16 @@ class _FilterChip extends StatelessWidget {
 }
 
 class _VaultBottomNav extends StatelessWidget {
-  const _VaultBottomNav({required this.onGeneratorTap, required this.onSettingsTap});
+  const _VaultBottomNav({required this.currentIndex, required this.onIndexSelected});
 
-  final VoidCallback onGeneratorTap;
-  final VoidCallback onSettingsTap;
-
-  static const _vaultTabIndex = 0;
-  static const _generatorTabIndex = 1;
+  final int currentIndex;
+  final ValueChanged<int> onIndexSelected;
 
   @override
   Widget build(BuildContext context) {
     return NavigationBar(
-      selectedIndex: _vaultTabIndex,
-      onDestinationSelected: (index) {
-        if (index == _generatorTabIndex) {
-          onGeneratorTap();
-        } else if (index != _vaultTabIndex) {
-          onSettingsTap();
-        }
-      },
+      selectedIndex: currentIndex,
+      onDestinationSelected: onIndexSelected,
       destinations: const [
         NavigationDestination(icon: Icon(Icons.lock_outlined), selectedIcon: Icon(Icons.lock), label: 'Bóveda'),
         NavigationDestination(icon: Icon(Icons.speed_outlined), label: 'Generador'),

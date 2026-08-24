@@ -286,6 +286,9 @@ void main() {
     expect(find.text('Editar'), findsOneWidget);
     expect(find.text('Eliminar'), findsOneWidget);
     expect(find.text('ivan_dev'), findsOneWidget);
+    // The bottom nav must stay put across every section of the app —
+    // viewing an item's details is not an exception.
+    expect(find.byType(NavigationBar), findsOneWidget);
   });
 
   testWidgets('editing from the details screen persists the change through the repository', (tester) async {
@@ -330,6 +333,7 @@ void main() {
 
     expect(locked, isFalse);
     expect(find.text('Generar contraseña'), findsOneWidget);
+    expect(find.byType(NavigationBar), findsOneWidget);
   });
 
   testWidgets('tapping Ajustes opens the settings screen without calling onLock', (tester) async {
@@ -342,6 +346,47 @@ void main() {
 
     expect(locked, isFalse);
     expect(find.text('SEGURIDAD'), findsOneWidget);
+    expect(find.byType(NavigationBar), findsOneWidget);
+  });
+
+  testWidgets('switching tabs and back preserves the search text', (tester) async {
+    useTallViewport(tester);
+    fakeRepository.seed(sampleItems());
+
+    await tester.pumpWidget(wrap(const VaultPage()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(TextField).first);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'git');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Ajustes'));
+    await tester.pumpAndSettle();
+    expect(find.text('SEGURIDAD'), findsOneWidget);
+
+    await tester.tap(find.text('Bóveda'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('git'), findsOneWidget);
+    expect(find.text('GitHub'), findsOneWidget);
+    expect(find.text('Netflix'), findsNothing);
+  });
+
+  testWidgets('tapping the active tab again pops it back to its own root', (tester) async {
+    useTallViewport(tester);
+    fakeRepository.seed([item(title: 'GitHub', username: 'ivan_dev')]);
+
+    await tester.pumpWidget(wrap(const VaultPage()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('GitHub'));
+    await tester.pumpAndSettle();
+    expect(find.text('Editar'), findsOneWidget);
+
+    await tester.tap(find.text('Bóveda'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Editar'), findsNothing);
+    expect(find.text('GitHub'), findsOneWidget);
   });
 
   group('search (img/07_search.png)', () {
