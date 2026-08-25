@@ -23,6 +23,7 @@ class VaultLocalDataSource {
     'tags',
     'color',
     'icon',
+    'extra_data',
     'is_favorite',
     'is_deleted',
     'created_at',
@@ -47,9 +48,9 @@ class VaultLocalDataSource {
   int insert(Map<String, Object?> values) {
     _db.execute(
       'INSERT INTO vault_items '
-      '(type, title, username, password, url, notes, category, tags, color, icon, '
+      '(type, title, username, password, url, notes, category, tags, color, icon, extra_data, '
       'is_favorite, is_deleted, created_at, updated_at, deleted_at) '
-      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);',
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);',
       [
         values['type'],
         values['title'],
@@ -61,6 +62,7 @@ class VaultLocalDataSource {
         values['tags'],
         values['color'],
         values['icon'],
+        values['extra_data'],
         values['is_favorite'],
         values['is_deleted'],
         values['created_at'],
@@ -74,7 +76,7 @@ class VaultLocalDataSource {
   void update(int id, Map<String, Object?> values) {
     _db.execute(
       'UPDATE vault_items SET type=?, title=?, username=?, password=?, url=?, notes=?, '
-      'category=?, tags=?, color=?, icon=?, updated_at=? WHERE id=?;',
+      'category=?, tags=?, color=?, icon=?, extra_data=?, updated_at=? WHERE id=?;',
       [
         values['type'],
         values['title'],
@@ -86,6 +88,7 @@ class VaultLocalDataSource {
         values['tags'],
         values['color'],
         values['icon'],
+        values['extra_data'],
         values['updated_at'],
         id,
       ],

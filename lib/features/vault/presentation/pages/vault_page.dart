@@ -4,9 +4,7 @@ import '../../../../core/di/service_locator.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/vault_item.dart';
 import '../../domain/repositories/vault_repository.dart';
-import '../../../backup/presentation/pages/import_export_page.dart';
 import '../../../generator/presentation/pages/generator_page.dart';
-import '../../../settings/presentation/pages/categories_page.dart';
 import '../../../settings/presentation/pages/settings_page.dart';
 import '../../../settings/presentation/pages/tags_page.dart';
 import '../../../settings/presentation/pages/trash_page.dart';
@@ -26,14 +24,17 @@ const double kVaultWideBreakpoint = 700;
 
 /// Reproduces img/03_vault.png, backed by the real encrypted database.
 class VaultPage extends StatefulWidget {
-  const VaultPage({super.key, this.onLock});
+  const VaultPage({super.key, this.onLock, this.onVaultDeleted});
 
-  /// No reference mockup shows a drawer, but a hamburger icon that does
-  /// nothing would be worse than not having one — this is the one entry
-  /// it opens with for now, since locking the vault manually is a real
-  /// requirement and not just a placeholder. The full drawer/settings menu
-  /// belongs to the Ajustes module (img/08_settings.png).
+  /// The AppBar's lock icon (mobile) and the sidebar's lock control (wide
+  /// layout) both call this directly — no confirmation, matching how a
+  /// physical lock button works elsewhere in the app.
   final VoidCallback? onLock;
+
+  /// Settings' "Eliminar bóveda permanentemente" calls this once the vault
+  /// is actually gone, so AuthGatePage can drop back to the welcome screen
+  /// instead of a lock screen with nothing left to unlock.
+  final VoidCallback? onVaultDeleted;
 
   @override
   State<VaultPage> createState() => _VaultPageState();
@@ -103,6 +104,7 @@ class _VaultPageState extends State<VaultPage> {
         item.url ?? '',
         item.category ?? '',
         ...item.tags,
+        ...item.extraData.values,
       ].join(' ').toLowerCase();
       return haystack.contains(query);
     }).toList();
@@ -122,7 +124,9 @@ class _VaultPageState extends State<VaultPage> {
   /// itself (see VaultSidebar's doc comment) — mobile's Ajustes is a
   /// persistent tab instead, so it never calls this.
   void _openSettings(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsPage()));
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => SettingsPage(onLock: widget.onLock, onVaultDeleted: widget.onVaultDeleted)),
+    );
   }
 
   void _openCreateItem(BuildContext context) {
@@ -203,8 +207,6 @@ class _VaultPageState extends State<VaultPage> {
           _sidebarSection = section;
           _filter = _VaultFilter.recent;
         });
-      case VaultSidebarSection.categories:
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CategoriesPage()));
       case VaultSidebarSection.tags:
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TagsPage()));
       case VaultSidebarSection.trash:
@@ -278,7 +280,7 @@ class _VaultPageState extends State<VaultPage> {
                           final item = items[index];
                           return VaultItemTile(
                             title: item.title,
-                            subtitle: item.username ?? item.url ?? item.category ?? '',
+                            subtitle: item.subtitleHint,
                             avatarColor: item.type.color,
                             isFavorite: item.isFavorite,
                             onTap: () => setState(() => _selectedItemId = item.id),
@@ -335,7 +337,7 @@ class _VaultPageState extends State<VaultPage> {
         children: [
           tabSlot(0, _vaultTabNavigatorKey, _buildVaultTabRoot),
           tabSlot(1, _generatorTabNavigatorKey, (_) => const GeneratorPage()),
-          tabSlot(2, _settingsTabNavigatorKey, (_) => const SettingsPage()),
+          tabSlot(2, _settingsTabNavigatorKey, (_) => SettingsPage(onLock: widget.onLock, onVaultDeleted: widget.onVaultDeleted)),
         ],
       ),
       bottomNavigationBar: _VaultBottomNav(
@@ -362,7 +364,7 @@ class _VaultPageState extends State<VaultPage> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
-        automaticallyImplyLeading: !_isSearching,
+        automaticallyImplyLeading: false,
         titleSpacing: _isSearching ? 4 : null,
         title: _isSearching
             ? TextField(
@@ -387,49 +389,15 @@ class _VaultPageState extends State<VaultPage> {
         actions: [
           if (_isSearching)
             TextButton(onPressed: _exitSearch, child: const Text('Cancelar'))
-          else
+          else ...[
             IconButton(icon: const Icon(Icons.search), onPressed: _enterSearch),
+            IconButton(
+              icon: const Icon(Icons.lock_outlined),
+              tooltip: 'Bloquear bóveda',
+              onPressed: () => widget.onLock?.call(),
+            ),
+          ],
         ],
-      ),
-      drawer: Drawer(
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.lock_outlined),
-                title: const Text('Bloquear bóveda'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  widget.onLock?.call();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.import_export_outlined),
-                title: const Text('Importar / Exportar'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ImportExportPage(
-                        onImportComplete: () {
-                          // A restore just replaced the auth header this
-                          // session was unlocked with, so every pushed
-                          // route (this one, VaultPage) has to go — only
-                          // AuthGatePage's own re-check of isVaultInitialized
-                          // is valid now, and it needs to be visible, not
-                          // buried under routes for a vault that's gone.
-                          Navigator.of(context).popUntil((route) => route.isFirst);
-                          widget.onLock?.call();
-                        },
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
       ),
       body: Column(
         children: [
@@ -512,7 +480,7 @@ class _VaultPageState extends State<VaultPage> {
                     final item = items[index];
                     return VaultItemTile(
                       title: item.title,
-                      subtitle: item.username ?? item.url ?? item.category ?? '',
+                      subtitle: item.subtitleHint,
                       avatarColor: item.type.color,
                       isFavorite: item.isFavorite,
                       alwaysShowStar: _isSearching,

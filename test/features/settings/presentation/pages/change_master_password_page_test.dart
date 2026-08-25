@@ -37,6 +37,10 @@ class FakeAuthRepository implements AuthRepository {
     configuredPassword = newPassword;
     return AuthSuccess(Uint8List(32));
   }
+
+  @override
+  Future<AuthResult> deleteVault({required String password}) =>
+      throw UnimplementedError();
 }
 
 void main() {

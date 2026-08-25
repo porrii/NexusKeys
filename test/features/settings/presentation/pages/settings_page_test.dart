@@ -1,20 +1,24 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nexuskeys/core/database/vault_session.dart';
 import 'package:nexuskeys/core/di/service_locator.dart';
+import 'package:nexuskeys/core/security/crypto_service.dart';
+import 'package:nexuskeys/core/security/crypto_service_impl.dart';
 import 'package:nexuskeys/core/theme/app_theme.dart';
+import 'package:nexuskeys/features/auth/data/datasources/auth_local_data_source.dart';
 import 'package:nexuskeys/features/auth/domain/entities/auth_result.dart';
 import 'package:nexuskeys/features/auth/domain/repositories/auth_repository.dart';
 import 'package:nexuskeys/features/auth/domain/services/biometric_service.dart';
 import 'package:nexuskeys/features/auth/domain/services/vault_key_store.dart';
+import 'package:nexuskeys/features/backup/domain/services/backup_service.dart';
 import 'package:nexuskeys/features/settings/data/repositories/settings_repository_impl.dart';
 import 'package:nexuskeys/features/settings/domain/repositories/settings_repository.dart';
 import 'package:nexuskeys/features/settings/presentation/pages/settings_page.dart';
-import 'package:nexuskeys/features/vault/domain/entities/category.dart';
 import 'package:nexuskeys/features/vault/domain/entities/vault_item.dart';
-import 'package:nexuskeys/features/vault/domain/repositories/category_repository.dart';
 import 'package:nexuskeys/features/vault/domain/repositories/vault_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -48,10 +52,13 @@ class _FakeVaultKeyStore implements VaultKeyStore {
   Future<void> clear() async => stored = null;
 }
 
-/// Only verifyMasterPassword is exercised from SettingsPage — the other
-/// methods belong to flows this file doesn't touch.
+/// verifyMasterPassword and deleteVault are both exercised from
+/// SettingsPage (biometric enable, and "Eliminar bóveda permanentemente"
+/// both confirm the master password the same way) — the rest belong to
+/// flows this file doesn't touch.
 class _FakeAuthRepository implements AuthRepository {
   String? correctPassword = 'master-password';
+  bool deleteVaultCalled = false;
 
   @override
   Future<bool> isVaultInitialized() async => true;
@@ -73,6 +80,13 @@ class _FakeAuthRepository implements AuthRepository {
     required String newPassword,
   }) =>
       throw UnimplementedError();
+
+  @override
+  Future<AuthResult> deleteVault({required String password}) async {
+    final result = await verifyMasterPassword(password);
+    if (result is AuthSuccess) deleteVaultCalled = true;
+    return result;
+  }
 }
 
 /// Minimal fake — SettingsPage only needs a VaultRepository registered
@@ -117,38 +131,16 @@ class _EmptyVaultRepository implements VaultRepository {
   void dispose() {}
 }
 
-/// Minimal fake — SettingsPage only needs a CategoryRepository registered
-/// because navigating to "Gestionar categorías" pushes CategoriesPage.
-/// Category CRUD behaviour itself is covered by categories_page_test.dart.
-class _EmptyCategoryRepository implements CategoryRepository {
-  @override
-  List<Category> currentCategories = const [];
-
-  @override
-  Stream<List<Category>> get categoriesStream => const Stream.empty();
-
-  @override
-  Future<Category> create(String name) async =>
-      Category(name: name, createdAt: DateTime.now());
-
-  @override
-  Future<void> delete(int id) async {}
-
-  @override
-  Future<void> reload() async {}
-
-  @override
-  void dispose() {}
-}
-
 void main() {
   late _FakeBiometricService fakeBiometricService;
   late _FakeVaultKeyStore fakeVaultKeyStore;
   late _FakeAuthRepository fakeAuthRepository;
+  late Directory tempDir;
 
   setUp(() async {
     await sl.reset();
     SharedPreferences.setMockInitialValues({});
+    tempDir = await Directory.systemTemp.createTemp('nexuskeys_settings_test_');
     fakeBiometricService = _FakeBiometricService();
     fakeVaultKeyStore = _FakeVaultKeyStore();
     fakeAuthRepository = _FakeAuthRepository();
@@ -156,22 +148,33 @@ void main() {
       SettingsRepositoryImpl(preferences: await SharedPreferences.getInstance()),
     );
     sl.registerSingleton<VaultRepository>(_EmptyVaultRepository());
-    sl.registerSingleton<CategoryRepository>(_EmptyCategoryRepository());
     sl.registerSingleton<BiometricService>(fakeBiometricService);
     sl.registerSingleton<VaultKeyStore>(fakeVaultKeyStore);
     sl.registerSingleton<AuthRepository>(fakeAuthRepository);
+    sl.registerSingleton<VaultSession>(VaultSession(overrideDirectory: tempDir));
+    sl.registerLazySingleton<CryptoService>(CryptoServiceImpl.new);
+    sl.registerLazySingleton(() => AuthLocalDataSource(overrideDirectory: tempDir));
+    sl.registerLazySingleton(
+      () => BackupService(cryptoService: sl(), authLocalDataSource: sl(), vaultSession: sl()),
+    );
+  });
+
+  tearDown(() async {
+    if (await tempDir.exists()) {
+      await tempDir.delete(recursive: true);
+    }
   });
 
   Widget wrap(Widget child) => MaterialApp(theme: AppTheme.dark, home: child);
 
-  // The full two-section list doesn't fit the default test surface.
+  // The full row list doesn't fit the default test surface.
   void useTallViewport(WidgetTester tester) {
-    tester.view.physicalSize = const Size(400, 1200);
+    tester.view.physicalSize = const Size(400, 1600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
   }
 
-  testWidgets('renders every row from img/08_settings.png', (tester) async {
+  testWidgets('renders every row from img/08_settings.png, plus the added sections', (tester) async {
     useTallViewport(tester);
     await tester.pumpWidget(wrap(const SettingsPage()));
 
@@ -187,9 +190,15 @@ void main() {
     expect(find.text('Oscuro'), findsOneWidget);
     expect(find.text('Idioma'), findsOneWidget);
     expect(find.text('Español'), findsOneWidget);
-    expect(find.text('Gestionar categorías'), findsOneWidget);
     expect(find.text('Etiquetas'), findsOneWidget);
     expect(find.text('Papelera'), findsOneWidget);
+    expect(find.text('DATOS'), findsOneWidget);
+    expect(find.text('Importar / Exportar'), findsOneWidget);
+    expect(find.text('Eliminar bóveda permanentemente'), findsOneWidget);
+    expect(find.text('ACERCA DE'), findsOneWidget);
+    expect(find.text('Licencias'), findsOneWidget);
+    expect(find.text('NexusKeys'), findsOneWidget);
+    expect(find.text('Creado por Iván Bezanilla López'), findsOneWidget);
   });
 
   testWidgets('Bloquear al cerrar starts on, per the mockup', (tester) async {
@@ -292,17 +301,6 @@ void main() {
     expect(find.text('Desactivada'), findsOneWidget);
   });
 
-  testWidgets('Gestionar categorías opens the categories screen', (tester) async {
-    useTallViewport(tester);
-    await tester.pumpWidget(wrap(const SettingsPage()));
-
-    await tester.tap(find.text('Gestionar categorías'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Todas'), findsOneWidget);
-    expect(find.text('Nueva categoría'), findsOneWidget);
-  });
-
   testWidgets('Etiquetas opens the tags screen', (tester) async {
     useTallViewport(tester);
     await tester.pumpWidget(wrap(const SettingsPage()));
@@ -311,5 +309,73 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Ningún elemento tiene etiquetas todavía'), findsOneWidget);
+  });
+
+  testWidgets('Importar / Exportar opens the import/export screen', (tester) async {
+    useTallViewport(tester);
+    await tester.pumpWidget(wrap(const SettingsPage()));
+
+    await tester.tap(find.text('Importar / Exportar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('EXPORTAR BÓVEDA'), findsOneWidget);
+    expect(find.text('IMPORTAR BÓVEDA'), findsOneWidget);
+  });
+
+  testWidgets('deleting the vault asks for confirmation, then the master password', (tester) async {
+    useTallViewport(tester);
+    await tester.pumpWidget(wrap(const SettingsPage()));
+
+    await tester.tap(find.text('Eliminar bóveda permanentemente'));
+    await tester.pumpAndSettle();
+    expect(find.text('¿Eliminar la bóveda permanentemente?'), findsOneWidget);
+
+    await tester.tap(find.text('Eliminar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Confirma tu contraseña maestra para eliminar la bóveda'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'master-password');
+    await tester.tap(find.text('Continuar'));
+    await tester.pumpAndSettle();
+
+    expect(fakeAuthRepository.deleteVaultCalled, isTrue);
+  });
+
+  testWidgets('cancelling the delete confirmation deletes nothing', (tester) async {
+    useTallViewport(tester);
+    await tester.pumpWidget(wrap(const SettingsPage()));
+
+    await tester.tap(find.text('Eliminar bóveda permanentemente'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+
+    expect(fakeAuthRepository.deleteVaultCalled, isFalse);
+  });
+
+  testWidgets('a wrong password aborts deleting the vault', (tester) async {
+    useTallViewport(tester);
+    await tester.pumpWidget(wrap(const SettingsPage()));
+
+    await tester.tap(find.text('Eliminar bóveda permanentemente'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Eliminar'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'not-the-password');
+    await tester.tap(find.text('Continuar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Contraseña incorrecta.'), findsOneWidget);
+    expect(fakeAuthRepository.deleteVaultCalled, isFalse);
+  });
+
+  testWidgets('Licencias opens the built-in Flutter license page', (tester) async {
+    useTallViewport(tester);
+    await tester.pumpWidget(wrap(const SettingsPage()));
+
+    await tester.tap(find.text('Licencias'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('NexusKeys'), findsWidgets);
   });
 }

@@ -6,7 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 /// filter the item list in place; the rest replace it with that section's
 /// own full-screen content (pushed as a route, same as on mobile) — see
 /// VaultPage's wide-layout handling of [VaultSidebarSection.onTap].
-enum VaultSidebarSection { vault, favorites, recent, categories, tags, trash, settings }
+enum VaultSidebarSection { vault, favorites, recent, tags, trash, settings }
 
 /// The persistent left navigation column shown on wide layouts —
 /// reproduces the sidebar in img/13_tablet.png and img/14_windows.png.
@@ -30,7 +30,6 @@ class VaultSidebar extends StatelessWidget {
     (section: VaultSidebarSection.vault, icon: Icons.lock_outlined, label: 'Bóveda'),
     (section: VaultSidebarSection.favorites, icon: Icons.star_border, label: 'Favoritos'),
     (section: VaultSidebarSection.recent, icon: Icons.access_time, label: 'Recientes'),
-    (section: VaultSidebarSection.categories, icon: Icons.grid_view_outlined, label: 'Categorías'),
     (section: VaultSidebarSection.tags, icon: Icons.label_outline, label: 'Etiqueta'),
     (section: VaultSidebarSection.trash, icon: Icons.delete_outline, label: 'Papelera'),
     (section: VaultSidebarSection.settings, icon: Icons.settings_outlined, label: 'Ajustes'),

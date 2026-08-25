@@ -6,12 +6,19 @@ import '../../../generator/domain/entities/generator_options.dart';
 import '../../../generator/domain/services/password_generator_service.dart';
 import '../../domain/entities/vault_item.dart';
 import '../../domain/entities/vault_item_type.dart';
+import '../../domain/repositories/vault_repository.dart';
 
 /// Create/edit form for a vault item — reproduces img/05_new_item.png for
-/// creation; there's no separate mockup for editing, so it reuses the same
-/// layout pre-filled, titled "Editar elemento". Deletion isn't reachable
-/// from here — img/04_item_details.png's "Eliminar" button is the only
-/// place that lives.
+/// creation (the mockup's own fields are exactly [VaultItemType.password]'s
+/// — the only type it shows); there's no separate mockup for editing, so it
+/// reuses the same layout pre-filled, titled "Editar elemento". Deletion
+/// isn't reachable from here — img/04_item_details.png's "Eliminar" button
+/// is the only place that lives.
+///
+/// Which fields appear below "Tipo" changes with it: each [VaultItemType]
+/// has its own, genuinely different set (a card asks for its number and
+/// CVV, not a username) rather than one generic form that looks identical
+/// no matter what's selected.
 class EditVaultItemPage extends StatefulWidget {
   const EditVaultItemPage({super.key, this.existingItem, this.onSave});
 
@@ -26,6 +33,7 @@ class EditVaultItemPage extends StatefulWidget {
 
 class _EditVaultItemPageState extends State<EditVaultItemPage> {
   final PasswordGeneratorService _generator = sl<PasswordGeneratorService>();
+  final VaultRepository _repository = sl<VaultRepository>();
 
   late VaultItemType _type;
   late final TextEditingController _title;
@@ -35,15 +43,35 @@ class _EditVaultItemPageState extends State<EditVaultItemPage> {
   late final TextEditingController _notes;
   late final TextEditingController _folder;
   late final TextEditingController _tags;
+  late final TextEditingController _cardholder;
+  late final TextEditingController _cardNumber;
+  late final TextEditingController _cardExpiry;
+  late final TextEditingController _cardCvv;
+  late final TextEditingController _fullName;
+  late final TextEditingController _documentNumber;
+  late final TextEditingController _phone;
+  late final TextEditingController _ssid;
   late bool _isFavorite;
   String? _titleError;
 
   bool get _isEditing => widget.existingItem != null;
 
+  /// Every distinct tag already used across the vault, for the Etiquetas
+  /// autocomplete — sorted so suggestions appear in a stable order.
+  List<String> get _existingTags {
+    final tags = <String>{};
+    for (final item in _repository.currentItems) {
+      tags.addAll(item.tags);
+    }
+    final sorted = tags.toList()..sort();
+    return sorted;
+  }
+
   @override
   void initState() {
     super.initState();
     final item = widget.existingItem;
+    final extra = item?.extraData ?? const {};
     _type = item?.type ?? VaultItemType.password;
     _title = TextEditingController(text: item?.title ?? '');
     _username = TextEditingController(text: item?.username ?? '');
@@ -52,6 +80,14 @@ class _EditVaultItemPageState extends State<EditVaultItemPage> {
     _notes = TextEditingController(text: item?.notes ?? '');
     _folder = TextEditingController(text: item?.category ?? '');
     _tags = TextEditingController(text: item?.tags.join(', ') ?? '');
+    _cardholder = TextEditingController(text: extra[VaultItem.keyCardholder] ?? '');
+    _cardNumber = TextEditingController(text: extra[VaultItem.keyCardNumber] ?? '');
+    _cardExpiry = TextEditingController(text: extra[VaultItem.keyCardExpiry] ?? '');
+    _cardCvv = TextEditingController(text: extra[VaultItem.keyCardCvv] ?? '');
+    _fullName = TextEditingController(text: extra[VaultItem.keyFullName] ?? '');
+    _documentNumber = TextEditingController(text: extra[VaultItem.keyDocumentNumber] ?? '');
+    _phone = TextEditingController(text: extra[VaultItem.keyPhone] ?? '');
+    _ssid = TextEditingController(text: extra[VaultItem.keySsid] ?? '');
     _isFavorite = item?.isFavorite ?? false;
   }
 
@@ -64,7 +100,41 @@ class _EditVaultItemPageState extends State<EditVaultItemPage> {
     _notes.dispose();
     _folder.dispose();
     _tags.dispose();
+    _cardholder.dispose();
+    _cardNumber.dispose();
+    _cardExpiry.dispose();
+    _cardCvv.dispose();
+    _fullName.dispose();
+    _documentNumber.dispose();
+    _phone.dispose();
+    _ssid.dispose();
     super.dispose();
+  }
+
+  Map<String, String> _buildExtraData() {
+    final entries = <String, String>{};
+    void put(String key, TextEditingController controller) {
+      final value = controller.text.trim();
+      if (value.isNotEmpty) entries[key] = value;
+    }
+
+    switch (_type) {
+      case VaultItemType.card:
+        put(VaultItem.keyCardholder, _cardholder);
+        put(VaultItem.keyCardNumber, _cardNumber);
+        put(VaultItem.keyCardExpiry, _cardExpiry);
+        put(VaultItem.keyCardCvv, _cardCvv);
+      case VaultItemType.identity:
+        put(VaultItem.keyFullName, _fullName);
+        put(VaultItem.keyDocumentNumber, _documentNumber);
+        put(VaultItem.keyPhone, _phone);
+      case VaultItemType.wifi:
+        put(VaultItem.keySsid, _ssid);
+      case VaultItemType.password:
+      case VaultItemType.secureNote:
+        break;
+    }
+    return entries;
   }
 
   void _submit() {
@@ -78,18 +148,25 @@ class _EditVaultItemPageState extends State<EditVaultItemPage> {
     final existing = widget.existingItem;
     final tags = _tags.text.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList();
 
+    // Only Contraseña and WiFi actually use username/password/url — clearing
+    // them for the other types keeps a type switch from leaving stale data
+    // behind in fields its own form no longer shows.
+    final usesLoginFields = _type == VaultItemType.password;
+    final usesPasswordField = _type == VaultItemType.password || _type == VaultItemType.wifi;
+
     final item = VaultItem(
       id: existing?.id,
       type: _type,
       title: title,
-      username: _username.text.trim().isEmpty ? null : _username.text.trim(),
-      password: _password.text.isEmpty ? null : _password.text,
-      url: _url.text.trim().isEmpty ? null : _url.text.trim(),
+      username: usesLoginFields && _username.text.trim().isNotEmpty ? _username.text.trim() : null,
+      password: usesPasswordField && _password.text.isNotEmpty ? _password.text : null,
+      url: usesLoginFields && _url.text.trim().isNotEmpty ? _url.text.trim() : null,
       notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
       category: _folder.text.trim().isEmpty ? null : _folder.text.trim(),
       tags: tags,
       color: existing?.color,
       icon: existing?.icon,
+      extraData: _buildExtraData(),
       isFavorite: _isFavorite,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
@@ -135,39 +212,53 @@ class _EditVaultItemPageState extends State<EditVaultItemPage> {
               },
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _username,
-              decoration: const InputDecoration(labelText: 'Usuario', hintText: 'Ej. usuario@email.com'),
-            ),
-            const SizedBox(height: 16),
-            AppPasswordField(
-              controller: _password,
-              hintText: 'Generar contraseña',
-              trailing: IconButton(
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Generar contraseña',
-                onPressed: () => setState(
-                  () => _password.text = _generator.generate(GeneratorOptions.recommended()),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _url,
-              decoration: const InputDecoration(labelText: 'Sitio web', hintText: 'https://ejemplo.com'),
-            ),
+            ..._typeSpecificFields(),
             const SizedBox(height: 16),
             TextField(
               controller: _folder,
               decoration: const InputDecoration(labelText: 'Carpeta', hintText: 'Sin carpeta'),
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _tags,
-              decoration: const InputDecoration(
-                labelText: 'Etiquetas',
-                hintText: 'Seleccionar etiquetas',
-              ),
+            Autocomplete<String>(
+              optionsBuilder: (textEditingValue) {
+                // Suggest existing tags not already typed into the
+                // comma-separated field, matching on whatever's after the
+                // last comma so autocomplete still works while adding a
+                // second or third tag.
+                final typed = textEditingValue.text;
+                final alreadyTyped = typed.split(',').map((t) => t.trim().toLowerCase()).toSet();
+                final currentFragment = typed.split(',').last.trim().toLowerCase();
+                if (currentFragment.isEmpty) return const [];
+                return _existingTags.where(
+                  (tag) =>
+                      tag.toLowerCase().contains(currentFragment) &&
+                      !alreadyTyped.contains(tag.toLowerCase()),
+                );
+              },
+              fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+                // Keep our own controller as the single source of truth —
+                // Autocomplete's internal one only drives the suggestion
+                // popup here, since the real field stays a plain
+                // comma-separated string the same as before.
+                controller.text = _tags.text;
+                controller.addListener(() {
+                  if (controller.text != _tags.text) _tags.text = controller.text;
+                });
+                return TextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  decoration: const InputDecoration(
+                    labelText: 'Etiquetas',
+                    hintText: 'Separadas por comas',
+                  ),
+                );
+              },
+              onSelected: (selection) {
+                final parts = _tags.text.split(',').map((t) => t.trim()).toList();
+                if (parts.isNotEmpty) parts.removeLast();
+                parts.add(selection);
+                _tags.text = '${parts.where((p) => p.isNotEmpty).join(', ')}, ';
+              },
             ),
             const SizedBox(height: 16),
             TextField(
@@ -194,5 +285,103 @@ class _EditVaultItemPageState extends State<EditVaultItemPage> {
         ),
       ),
     );
+  }
+
+  List<Widget> _typeSpecificFields() {
+    switch (_type) {
+      case VaultItemType.password:
+        return [
+          TextField(
+            controller: _username,
+            decoration:
+                const InputDecoration(labelText: 'Usuario', hintText: 'Ej. usuario@email.com'),
+          ),
+          const SizedBox(height: 16),
+          AppPasswordField(
+            controller: _password,
+            hintText: 'Generar contraseña',
+            trailing: IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Generar contraseña',
+              onPressed: () => setState(
+                () => _password.text = _generator.generate(GeneratorOptions.recommended()),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _url,
+            decoration: const InputDecoration(labelText: 'Sitio web', hintText: 'https://ejemplo.com'),
+          ),
+        ];
+      case VaultItemType.card:
+        return [
+          TextField(
+            controller: _cardholder,
+            decoration: const InputDecoration(labelText: 'Titular', hintText: 'Nombre en la tarjeta'),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _cardNumber,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'Número de tarjeta'),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _cardExpiry,
+                  decoration: const InputDecoration(labelText: 'Caducidad', hintText: 'MM/AA'),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: AppPasswordField(controller: _cardCvv, hintText: 'CVV'),
+              ),
+            ],
+          ),
+        ];
+      case VaultItemType.secureNote:
+        return const [];
+      case VaultItemType.identity:
+        return [
+          TextField(
+            controller: _fullName,
+            decoration: const InputDecoration(labelText: 'Nombre completo'),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _documentNumber,
+            decoration: const InputDecoration(labelText: 'DNI / Pasaporte'),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _phone,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(labelText: 'Teléfono'),
+          ),
+        ];
+      case VaultItemType.wifi:
+        return [
+          TextField(
+            controller: _ssid,
+            decoration: const InputDecoration(labelText: 'Nombre de red (SSID)'),
+          ),
+          const SizedBox(height: 16),
+          AppPasswordField(
+            controller: _password,
+            hintText: 'Contraseña de red',
+            trailing: IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Generar contraseña',
+              onPressed: () => setState(
+                () => _password.text = _generator.generate(GeneratorOptions.recommended()),
+              ),
+            ),
+          ),
+        ];
+    }
   }
 }

@@ -41,4 +41,9 @@ class AuthLocalDataSource {
     await file.create(recursive: true);
     await file.writeAsString(jsonEncode(config.toJson()));
   }
+
+  Future<void> delete() async {
+    final file = await _authFile();
+    if (await file.exists()) await file.delete();
+  }
 }

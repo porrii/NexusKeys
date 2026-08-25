@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/vault_item.dart';
@@ -29,6 +30,18 @@ class VaultDetailPane extends StatelessWidget {
   void _copyToClipboard(BuildContext context, String label, String value) {
     Clipboard.setData(ClipboardData(text: value));
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$label copiado')));
+  }
+
+  Future<void> _openUrl(BuildContext context, String rawUrl) async {
+    final uri = Uri.tryParse(rawUrl.contains('://') ? rawUrl : 'https://$rawUrl');
+    if (uri == null || !await canLaunchUrl(uri)) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo abrir el enlace')),
+      );
+      return;
+    }
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
@@ -106,9 +119,23 @@ class VaultDetailPane extends StatelessWidget {
           ItemFieldCard(
             label: 'Sitio web',
             icon: Icons.language,
-            child: Text(url, style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.primary)),
+            child: InkWell(
+              onTap: () => _openUrl(context, url),
+              child: Text(
+                url,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.primary,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
           ),
         ],
+        ...buildExtraDataFields(
+          context: context,
+          item: item,
+          onCopy: (label, value) => _copyToClipboard(context, label, value),
+        ),
         if (item.notes case final notes?) ...[
           const SizedBox(height: 14),
           ItemFieldCard(label: 'Notas', child: Text(notes, style: theme.textTheme.bodyLarge)),

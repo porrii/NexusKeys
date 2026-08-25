@@ -5,9 +5,10 @@ import 'package:equatable/equatable.dart';
 import 'vault_item_type.dart';
 
 /// One entry in the vault. Covers every item kind in [VaultItemType] with
-/// the common fields the spec requires for all of them; type-specific data
-/// (card expiry, WiFi security, ...) will live in the `extra_data` JSON
-/// column once the dedicated per-type forms are built.
+/// the common fields shared by all of them; type-specific fields (a card's
+/// number, an identity's document number, ...) live in [extraData] instead
+/// — see the `keyFor*` constants below for which keys each type actually
+/// reads and writes.
 class VaultItem extends Equatable {
   const VaultItem({
     required this.type,
@@ -23,10 +24,28 @@ class VaultItem extends Equatable {
     this.tags = const [],
     this.color,
     this.icon,
+    this.extraData = const {},
     this.isFavorite = false,
     this.isDeleted = false,
     this.deletedAt,
   });
+
+  /// [VaultItemType.card]'s extra fields.
+  static const keyCardholder = 'cardholder';
+  static const keyCardNumber = 'card_number';
+  static const keyCardExpiry = 'card_expiry';
+  static const keyCardCvv = 'card_cvv';
+
+  /// [VaultItemType.identity]'s extra fields.
+  static const keyFullName = 'full_name';
+  static const keyDocumentNumber = 'document_number';
+  static const keyPhone = 'phone';
+
+  /// [VaultItemType.wifi]'s extra field — the network's SSID. Its password
+  /// reuses the common [password] field instead of an extra one, since
+  /// "the network's password" maps directly onto what that field already
+  /// means for every other type.
+  static const keySsid = 'ssid';
 
   /// Null for an item that hasn't been persisted yet.
   final int? id;
@@ -40,6 +59,25 @@ class VaultItem extends Equatable {
   final List<String> tags;
   final String? color;
   final String? icon;
+
+  /// Type-specific fields, keyed by the `key*` constants above. Never
+  /// contains an entry for a field the item's own [type] doesn't use.
+  final Map<String, String> extraData;
+
+  /// A short second line for a list row — the first field that actually
+  /// means something for this item's type, since username/url are only
+  /// ever populated for [VaultItemType.password]. Empty string (never
+  /// null) when nothing applies, so callers can use it directly.
+  String get subtitleHint {
+    return username ??
+        url ??
+        extraData[keyCardNumber] ??
+        extraData[keyFullName] ??
+        extraData[keySsid] ??
+        category ??
+        '';
+  }
+
   final bool isFavorite;
   final bool isDeleted;
   final DateTime createdAt;
@@ -58,6 +96,7 @@ class VaultItem extends Equatable {
     List<String>? tags,
     String? color,
     String? icon,
+    Map<String, String>? extraData,
     bool? isFavorite,
     bool? isDeleted,
     DateTime? updatedAt,
@@ -75,6 +114,7 @@ class VaultItem extends Equatable {
       tags: tags ?? this.tags,
       color: color ?? this.color,
       icon: icon ?? this.icon,
+      extraData: extraData ?? this.extraData,
       isFavorite: isFavorite ?? this.isFavorite,
       isDeleted: isDeleted ?? this.isDeleted,
       createdAt: createdAt,
@@ -98,6 +138,7 @@ class VaultItem extends Equatable {
       'tags': jsonEncode(tags),
       'color': color,
       'icon': icon,
+      'extra_data': extraData.isEmpty ? null : jsonEncode(extraData),
       'is_favorite': isFavorite ? 1 : 0,
       'is_deleted': isDeleted ? 1 : 0,
       // Normalized to UTC before storage: SQLite's INTEGER column is just
@@ -113,6 +154,7 @@ class VaultItem extends Equatable {
 
   factory VaultItem.fromMap(Map<String, Object?> map) {
     final tagsJson = map['tags'] as String?;
+    final extraDataJson = map['extra_data'] as String?;
     final deletedAtMillis = map['deleted_at'] as int?;
 
     return VaultItem(
@@ -127,6 +169,9 @@ class VaultItem extends Equatable {
       tags: tagsJson == null ? const [] : List<String>.from(jsonDecode(tagsJson) as List),
       color: map['color'] as String?,
       icon: map['icon'] as String?,
+      extraData: extraDataJson == null
+          ? const {}
+          : Map<String, String>.from(jsonDecode(extraDataJson) as Map),
       isFavorite: (map['is_favorite'] as int) == 1,
       isDeleted: (map['is_deleted'] as int) == 1,
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int, isUtc: true),
@@ -150,6 +195,7 @@ class VaultItem extends Equatable {
         tags,
         color,
         icon,
+        extraData,
         isFavorite,
         isDeleted,
         createdAt,

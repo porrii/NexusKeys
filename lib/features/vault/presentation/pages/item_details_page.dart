@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/vault_item.dart';
@@ -63,6 +64,18 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
     if (updated != null && mounted) setState(() => _item = updated);
   }
 
+  Future<void> _openUrl(String rawUrl) async {
+    final uri = Uri.tryParse(rawUrl.contains('://') ? rawUrl : 'https://$rawUrl');
+    if (uri == null || !await canLaunchUrl(uri)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo abrir el enlace')),
+      );
+      return;
+    }
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
   Future<void> _confirmDelete() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -90,12 +103,6 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
             icon: Icon(item.isFavorite ? Icons.star : Icons.star_border),
             color: item.isFavorite ? AppColors.warning : null,
             onPressed: _toggleFavorite,
-          ),
-          IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Disponible próximamente')),
-            ),
           ),
         ],
       ),
@@ -147,12 +154,19 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
               ItemFieldCard(
                 label: 'Sitio web',
                 icon: Icons.language,
-                child: Text(
-                  url,
-                  style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.primary),
+                child: InkWell(
+                  onTap: () => _openUrl(url),
+                  child: Text(
+                    url,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: theme.colorScheme.primary,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
                 ),
               ),
             ],
+            ...buildExtraDataFields(context: context, item: item, onCopy: _copyToClipboard),
             if (item.notes case final notes?) ...[
               const SizedBox(height: 14),
               ItemFieldCard(label: 'Notas', child: Text(notes, style: theme.textTheme.bodyLarge)),

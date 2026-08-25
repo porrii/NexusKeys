@@ -7,13 +7,56 @@ import 'package:nexuskeys/core/theme/app_theme.dart';
 import 'package:nexuskeys/features/generator/domain/services/password_generator_service.dart';
 import 'package:nexuskeys/features/vault/domain/entities/vault_item.dart';
 import 'package:nexuskeys/features/vault/domain/entities/vault_item_type.dart';
+import 'package:nexuskeys/features/vault/domain/repositories/vault_repository.dart';
 import 'package:nexuskeys/features/vault/presentation/pages/edit_vault_item_page.dart';
+
+/// Minimal fake — only needed because EditVaultItemPage reads
+/// currentItems for the Etiquetas autocomplete suggestions. None of these
+/// tests exercise that suggestion list itself.
+class _EmptyVaultRepository implements VaultRepository {
+  @override
+  List<VaultItem> currentItems = const [];
+
+  @override
+  List<VaultItem> currentTrash = const [];
+
+  @override
+  Stream<List<VaultItem>> get itemsStream => const Stream.empty();
+
+  @override
+  Stream<List<VaultItem>> get trashStream => const Stream.empty();
+
+  @override
+  Future<VaultItem> create(VaultItem draft) async => draft;
+
+  @override
+  Future<void> update(VaultItem item) async {}
+
+  @override
+  Future<void> setFavorite(int id, bool isFavorite) async {}
+
+  @override
+  Future<void> moveToTrash(int id) async {}
+
+  @override
+  Future<void> restoreFromTrash(int id) async {}
+
+  @override
+  Future<void> deletePermanently(int id) async {}
+
+  @override
+  Future<void> reload() async {}
+
+  @override
+  void dispose() {}
+}
 
 void main() {
   setUp(() async {
     await sl.reset();
     sl.registerLazySingleton<CryptoService>(CryptoServiceImpl.new);
     sl.registerLazySingleton(() => PasswordGeneratorService(cryptoService: sl()));
+    sl.registerSingleton<VaultRepository>(_EmptyVaultRepository());
   });
 
   Widget wrap(Widget child) => MaterialApp(theme: AppTheme.dark, home: child);
@@ -41,7 +84,7 @@ void main() {
     expect(find.text('https://ejemplo.com'), findsOneWidget);
     expect(find.text('Carpeta'), findsOneWidget);
     expect(find.text('Sin carpeta'), findsOneWidget);
-    expect(find.text('Seleccionar etiquetas'), findsOneWidget);
+    expect(find.text('Separadas por comas'), findsOneWidget);
     expect(find.text('Notas adicionales'), findsOneWidget);
   });
 

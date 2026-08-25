@@ -79,6 +79,15 @@ class FakeAuthRepository implements AuthRepository {
     if (verified is! AuthSuccess) return verified;
     return setupMasterPassword(newPassword);
   }
+
+  @override
+  Future<AuthResult> deleteVault({required String password}) async {
+    final verified = await verifyMasterPassword(password);
+    if (verified is! AuthSuccess) return verified;
+    vaultInitialized = false;
+    configuredPassword = null;
+    return verified;
+  }
 }
 
 void main() {
@@ -178,10 +187,11 @@ void main() {
     expect(find.text('Buscar en la bóveda'), findsOneWidget);
   });
 
-  testWidgets('locking from the vault screen drawer returns to the lock screen', (tester) async {
-    // VaultPage's drawer only exists below kVaultWideBreakpoint — the
-    // default test surface is wide enough to render its wide sidebar
-    // layout instead, which has no "Open navigation menu" drawer at all.
+  testWidgets('locking from the vault screen AppBar returns to the lock screen', (tester) async {
+    // Below kVaultWideBreakpoint — the default test surface is wide enough
+    // to render VaultPage's wide sidebar layout instead, whose lock
+    // control has no tooltip (see VaultSidebar) the way the mobile
+    // AppBar's icon does.
     tester.view.physicalSize = const Size(400, 1400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -194,9 +204,7 @@ void main() {
     await tester.tap(find.text('Desbloquear'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Open navigation menu'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Bloquear bóveda'));
+    await tester.tap(find.byTooltip('Bloquear bóveda'));
     await tester.pumpAndSettle();
 
     expect(find.text('Desbloquear bóveda'), findsOneWidget);

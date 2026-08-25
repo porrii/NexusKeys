@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../../../core/database/vault_session.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/security/secure_bytes.dart';
 import '../../../../core/widgets/app_password_field.dart';
@@ -7,10 +9,10 @@ import '../../../auth/domain/entities/auth_result.dart';
 import '../../../auth/domain/repositories/auth_repository.dart';
 import '../../../auth/domain/services/biometric_service.dart';
 import '../../../auth/domain/services/vault_key_store.dart';
+import '../../../backup/presentation/pages/import_export_page.dart';
 import '../../domain/entities/app_settings.dart';
 import '../../domain/repositories/settings_repository.dart';
 import 'auto_lock_settings_page.dart';
-import 'categories_page.dart';
 import 'change_master_password_page.dart';
 import 'language_settings_page.dart';
 import 'tags_page.dart';
@@ -19,7 +21,17 @@ import 'trash_page.dart';
 
 /// Reproduces img/08_settings.png.
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key});
+  const SettingsPage({super.key, this.onLock, this.onVaultDeleted});
+
+  /// Only used by "Importar / Exportar": a successful restore replaces the
+  /// auth header this session was unlocked with, so the app has to drop
+  /// back to the lock screen — see ImportExportPage's own doc comment.
+  final VoidCallback? onLock;
+
+  /// Called after "Eliminar bóveda permanentemente" actually succeeds, so
+  /// the app can drop back to the welcome screen instead of a lock screen
+  /// with nothing left to unlock.
+  final VoidCallback? onVaultDeleted;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -30,6 +42,17 @@ class _SettingsPageState extends State<SettingsPage> {
   final BiometricService _biometricService = sl<BiometricService>();
   final VaultKeyStore _vaultKeyStore = sl<VaultKeyStore>();
   final AuthRepository _authRepository = sl<AuthRepository>();
+  final VaultSession _vaultSession = sl<VaultSession>();
+
+  String? _appVersion;
+
+  @override
+  void initState() {
+    super.initState();
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) setState(() => _appVersion = info.version);
+    });
+  }
 
   static const _themeLabels = {
     AppThemeMode.light: 'Claro',
@@ -102,12 +125,12 @@ class _SettingsPageState extends State<SettingsPage> {
     if (mounted) setState(() {});
   }
 
-  Future<String?> _promptForPassword() {
+  Future<String?> _promptForPassword({String title = 'Confirma tu contraseña maestra'}) {
     final controller = TextEditingController();
     return showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirma tu contraseña maestra'),
+        title: Text(title),
         content: AppPasswordField(
           controller: controller,
           hintText: 'Contraseña maestra',
@@ -123,6 +146,47 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _deleteVaultPermanently() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Eliminar la bóveda permanentemente?'),
+        content: const Text(
+          'Se borrarán todos los elementos y ajustes de forma irreversible. Esta acción no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final password = await _promptForPassword(
+      title: 'Confirma tu contraseña maestra para eliminar la bóveda',
+    );
+    if (password == null || !mounted) return;
+
+    final result = await _authRepository.deleteVault(password: password);
+    if (!mounted) return;
+    if (result is! AuthSuccess) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Contraseña incorrecta.')),
+      );
+      return;
+    }
+
+    _vaultSession.lock();
+    final vaultFile = await _vaultSession.resolveDatabaseFile();
+    if (await vaultFile.exists()) await vaultFile.delete();
+
+    widget.onVaultDeleted?.call();
   }
 
   @override
@@ -169,12 +233,36 @@ class _SettingsPageState extends State<SettingsPage> {
               value: 'Español',
               onTap: () => _push(const LanguageSettingsPage()),
             ),
-            _SettingsTile(
-              title: 'Gestionar categorías',
-              onTap: () => _push(const CategoriesPage()),
-            ),
             _SettingsTile(title: 'Etiquetas', onTap: () => _push(const TagsPage())),
             _SettingsTile(title: 'Papelera', onTap: () => _push(const TrashPage())),
+            const _SectionHeader('DATOS'),
+            _SettingsTile(
+              title: 'Importar / Exportar',
+              onTap: () => _push(
+                ImportExportPage(
+                  onImportComplete: () {
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                    widget.onLock?.call();
+                  },
+                ),
+              ),
+            ),
+            _SettingsTile(
+              title: 'Eliminar bóveda permanentemente',
+              titleColor: Theme.of(context).colorScheme.error,
+              onTap: _deleteVaultPermanently,
+            ),
+            const _SectionHeader('ACERCA DE'),
+            _SettingsTile(
+              title: 'Licencias',
+              onTap: () => showLicensePage(
+                context: context,
+                applicationName: 'NexusKeys',
+                applicationVersion: _appVersion,
+                applicationLegalese: '© ${DateTime.now().year} Iván Bezanilla López',
+              ),
+            ),
+            _AppFooter(version: _appVersion),
           ],
         ),
       ),
@@ -200,18 +288,19 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _SettingsTile extends StatelessWidget {
-  const _SettingsTile({required this.title, this.value, this.onTap});
+  const _SettingsTile({required this.title, this.value, this.onTap, this.titleColor});
 
   final String title;
   final String? value;
   final VoidCallback? onTap;
+  final Color? titleColor;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return ListTile(
-      title: Text(title, style: theme.textTheme.bodyLarge),
+      title: Text(title, style: theme.textTheme.bodyLarge?.copyWith(color: titleColor)),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -240,6 +329,34 @@ class _SettingsSwitchTile extends StatelessWidget {
       title: Text(title, style: Theme.of(context).textTheme.bodyLarge),
       value: value,
       onChanged: onChanged,
+    );
+  }
+}
+
+class _AppFooter extends StatelessWidget {
+  const _AppFooter({required this.version});
+
+  /// Null while [PackageInfo.fromPlatform] is still resolving.
+  final String? version;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
+      child: Column(
+        children: [
+          Text('NexusKeys', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 2),
+          Text(
+            version == null ? 'Cargando versión…' : 'Versión $version',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: 2),
+          Text('Creado por Iván Bezanilla López', style: theme.textTheme.bodySmall),
+        ],
+      ),
     );
   }
 }

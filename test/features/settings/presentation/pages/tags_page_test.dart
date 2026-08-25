@@ -26,7 +26,11 @@ class _FakeVaultRepository implements VaultRepository {
   Future<VaultItem> create(VaultItem draft) async => draft;
 
   @override
-  Future<void> update(VaultItem item) async {}
+  Future<void> update(VaultItem item) async {
+    currentItems = [
+      for (final existing in currentItems) existing.id == item.id ? item : existing,
+    ];
+  }
 
   @override
   Future<void> setFavorite(int id, bool isFavorite) async {}
@@ -48,9 +52,16 @@ class _FakeVaultRepository implements VaultRepository {
 }
 
 void main() {
-  VaultItem item({required String title, List<String> tags = const []}) {
+  VaultItem item({int? id, required String title, List<String> tags = const []}) {
     final now = DateTime.now();
-    return VaultItem(type: VaultItemType.password, title: title, tags: tags, createdAt: now, updatedAt: now);
+    return VaultItem(
+      id: id,
+      type: VaultItemType.password,
+      title: title,
+      tags: tags,
+      createdAt: now,
+      updatedAt: now,
+    );
   }
 
   Widget wrap(Widget child) => MaterialApp(theme: AppTheme.dark, home: child);
@@ -83,5 +94,53 @@ void main() {
     expect(find.text('Dev'), findsOneWidget);
     expect(find.text('Personal'), findsOneWidget);
     expect(find.text('1'), findsNWidgets(2));
+  });
+
+  testWidgets('renaming a tag updates every item that carries it', (tester) async {
+    final repository = _FakeVaultRepository([
+      item(id: 1, title: 'GitHub', tags: ['Work']),
+      item(id: 2, title: 'GitLab', tags: ['Work', 'Dev']),
+    ]);
+    sl.registerSingleton<VaultRepository>(repository);
+
+    await tester.pumpWidget(wrap(const TagsPage()));
+    // Tags render alphabetically ('Dev' before 'Work') — the last menu
+    // button is the one on the 'Work' row.
+    await tester.tap(find.byIcon(Icons.more_vert).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Renombrar'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Trabajo');
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Trabajo'), findsOneWidget);
+    expect(find.text('Work'), findsNothing);
+    expect(repository.currentItems[0].tags, ['Trabajo']);
+    expect(repository.currentItems[1].tags, ['Trabajo', 'Dev']);
+  });
+
+  testWidgets('deleting a tag asks for confirmation, then removes it from every item', (tester) async {
+    final repository = _FakeVaultRepository([
+      item(id: 1, title: 'GitHub', tags: ['Work']),
+      item(id: 2, title: 'GitLab', tags: ['Work', 'Dev']),
+    ]);
+    sl.registerSingleton<VaultRepository>(repository);
+
+    await tester.pumpWidget(wrap(const TagsPage()));
+    // Tags render alphabetically ('Dev' before 'Work') — the last menu
+    // button is the one on the 'Work' row.
+    await tester.tap(find.byIcon(Icons.more_vert).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Eliminar'));
+    await tester.pumpAndSettle();
+    expect(find.text('¿Eliminar esta etiqueta?'), findsOneWidget);
+
+    await tester.tap(find.text('Eliminar').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Work'), findsNothing);
+    expect(repository.currentItems[0].tags, isEmpty);
+    expect(repository.currentItems[1].tags, ['Dev']);
   });
 }

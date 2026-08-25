@@ -11,7 +11,6 @@ import '../../domain/services/biometric_service.dart';
 import '../../domain/services/vault_key_store.dart';
 import '../../../backup/presentation/pages/import_export_page.dart';
 import '../../../settings/domain/repositories/settings_repository.dart';
-import '../../../vault/domain/repositories/category_repository.dart';
 import '../../../vault/domain/repositories/vault_repository.dart';
 import '../../../vault/presentation/pages/vault_page.dart';
 import 'biometric_prompt_page.dart';
@@ -88,7 +87,6 @@ class _AuthGatePageState extends State<AuthGatePage> {
         await _vaultSession.unlock(vaultKey);
         wipe(vaultKey);
         await sl<VaultRepository>().reload();
-        await sl<CategoryRepository>().reload();
         if (!mounted) return;
         Navigator.of(context).pop();
         setState(() => _screen = _Screen.vault);
@@ -114,7 +112,6 @@ class _AuthGatePageState extends State<AuthGatePage> {
         await _vaultSession.unlock(vaultKey);
         wipe(vaultKey);
         await sl<VaultRepository>().reload();
-        await sl<CategoryRepository>().reload();
         if (!mounted) return;
         setState(() {
           _isBusy = false;
@@ -158,10 +155,23 @@ class _AuthGatePageState extends State<AuthGatePage> {
     _checkVaultStatus();
   }
 
+  /// The vault (auth header + database file) was just erased from
+  /// Settings' "Eliminar bóveda permanentemente" — there's nothing left to
+  /// unlock, so this goes straight to [WelcomePage] rather than the lock
+  /// screen [_lockVault] would show.
+  void _handleVaultDeleted() {
+    _vaultSession.lock();
+    setState(() {
+      _screen = _Screen.welcome;
+      _lockScreenError = null;
+    });
+  }
+
   void _openImportExisting() {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ImportExportPage(
+          showExportSection: false,
           onImportComplete: () {
             Navigator.of(context).pop();
             // A vault now exists where there wasn't one — re-check rather
@@ -189,7 +199,7 @@ class _AuthGatePageState extends State<AuthGatePage> {
           biometricAvailable: _biometricAvailable,
           onBiometricUnlock: _biometricAvailable ? _handleBiometricUnlock : null,
         ),
-      _Screen.vault => VaultPage(onLock: _lockVault),
+      _Screen.vault => VaultPage(onLock: _lockVault, onVaultDeleted: _handleVaultDeleted),
     };
   }
 }

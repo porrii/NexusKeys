@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:nexuskeys/core/database/vault_session.dart';
 import 'package:nexuskeys/core/di/service_locator.dart';
 import 'package:nexuskeys/core/security/crypto_service.dart';
 import 'package:nexuskeys/core/security/crypto_service_impl.dart';
@@ -16,10 +18,8 @@ import 'package:nexuskeys/features/auth/domain/services/vault_key_store.dart';
 import 'package:nexuskeys/features/generator/domain/services/password_generator_service.dart';
 import 'package:nexuskeys/features/settings/data/repositories/settings_repository_impl.dart';
 import 'package:nexuskeys/features/settings/domain/repositories/settings_repository.dart';
-import 'package:nexuskeys/features/vault/domain/entities/category.dart';
 import 'package:nexuskeys/features/vault/domain/entities/vault_item.dart';
 import 'package:nexuskeys/features/vault/domain/entities/vault_item_type.dart';
-import 'package:nexuskeys/features/vault/domain/repositories/category_repository.dart';
 import 'package:nexuskeys/features/vault/domain/repositories/vault_repository.dart';
 import 'package:nexuskeys/features/vault/presentation/pages/vault_page.dart';
 
@@ -67,26 +67,10 @@ class _StubAuthRepository implements AuthRepository {
     required String newPassword,
   }) =>
       throw UnimplementedError();
-}
-
-class _StubCategoryRepository implements CategoryRepository {
-  @override
-  List<Category> currentCategories = const [];
 
   @override
-  Stream<List<Category>> get categoriesStream => const Stream.empty();
-
-  @override
-  Future<Category> create(String name) async => Category(name: name, createdAt: DateTime.now());
-
-  @override
-  Future<void> delete(int id) async {}
-
-  @override
-  Future<void> reload() async {}
-
-  @override
-  void dispose() {}
+  Future<AuthResult> deleteVault({required String password}) =>
+      throw UnimplementedError();
 }
 
 class _FakeVaultRepository implements VaultRepository {
@@ -147,9 +131,11 @@ class _FakeVaultRepository implements VaultRepository {
 
 void main() {
   late _FakeVaultRepository fakeRepository;
+  late Directory tempDir;
 
   setUp(() async {
     fakeRepository = _FakeVaultRepository();
+    tempDir = await Directory.systemTemp.createTemp('nexuskeys_wide_layout_test_');
     await sl.reset();
     sl.registerSingleton<VaultRepository>(fakeRepository);
     sl.registerLazySingleton<CryptoService>(CryptoServiceImpl.new);
@@ -161,7 +147,13 @@ void main() {
     sl.registerSingleton<BiometricService>(_StubBiometricService());
     sl.registerSingleton<VaultKeyStore>(_StubVaultKeyStore());
     sl.registerSingleton<AuthRepository>(_StubAuthRepository());
-    sl.registerSingleton<CategoryRepository>(_StubCategoryRepository());
+    sl.registerSingleton<VaultSession>(VaultSession(overrideDirectory: tempDir));
+  });
+
+  tearDown(() async {
+    if (await tempDir.exists()) {
+      await tempDir.delete(recursive: true);
+    }
   });
 
   Widget wrap(Widget child) => MaterialApp(theme: AppTheme.dark, home: child);
@@ -199,7 +191,6 @@ void main() {
     expect(find.text('Bóveda'), findsOneWidget);
     expect(find.text('Favoritos'), findsOneWidget);
     expect(find.text('Recientes'), findsOneWidget);
-    expect(find.text('Categorías'), findsOneWidget);
     expect(find.text('Etiqueta'), findsOneWidget);
     expect(find.text('Papelera'), findsOneWidget);
     expect(find.text('Ajustes'), findsOneWidget);
@@ -242,15 +233,15 @@ void main() {
     expect(find.text('GitHub'), findsNothing);
   });
 
-  testWidgets('the Categorías sidebar entry opens CategoriesPage', (tester) async {
+  testWidgets('the Etiqueta sidebar entry opens TagsPage', (tester) async {
     useWideViewport(tester);
 
     await tester.pumpWidget(wrap(const VaultPage()));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Categorías'));
+    await tester.tap(find.text('Etiqueta'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Nueva categoría'), findsOneWidget);
+    expect(find.text('Ningún elemento tiene etiquetas todavía'), findsOneWidget);
   });
 
   testWidgets('the Papelera sidebar entry opens TrashPage', (tester) async {

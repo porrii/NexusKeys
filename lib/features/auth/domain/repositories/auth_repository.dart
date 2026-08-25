@@ -26,4 +26,11 @@ abstract interface class AuthRepository {
     required String currentPassword,
     required String newPassword,
   });
+
+  /// Erases the auth header (salt, KDF params, verifier) after confirming
+  /// [password] is correct — the vault's own database file is a separate
+  /// concern, deleted by the caller via [VaultSession] once this succeeds.
+  /// Returns [AuthFailureReason.wrongPassword] without deleting anything if
+  /// [password] doesn't match.
+  Future<AuthResult> deleteVault({required String password});
 }

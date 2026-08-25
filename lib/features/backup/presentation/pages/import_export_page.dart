@@ -8,17 +8,21 @@ import '../../../../core/di/service_locator.dart';
 import '../../../../core/widgets/app_password_field.dart';
 import '../../domain/services/backup_service.dart';
 
-/// Reproduces img/09_import_export.png. Reused both from the vault
-/// screen's drawer (export a backup, or restore one over the current
-/// vault) and from img/02_welcome.png's "Abrir bóveda existente" (import
-/// to bootstrap a vault on a fresh install) — [onImportComplete] lets each
-/// caller decide what happens after a successful restore, since that
-/// differs: the drawer needs to drop back to the lock screen (the auth
-/// header was just replaced), the welcome flow needs to unlock straight in.
+/// Reproduces img/09_import_export.png. Reused both from Ajustes (export a
+/// backup, or restore one over the current vault) and from
+/// img/02_welcome.png's "Abrir bóveda existente" (import to bootstrap a
+/// vault on a fresh install) — [onImportComplete] lets each caller decide
+/// what happens after a successful restore, since that differs: Ajustes
+/// needs to drop back to the lock screen (the auth header was just
+/// replaced), the welcome flow needs to unlock straight in.
 class ImportExportPage extends StatefulWidget {
-  const ImportExportPage({super.key, this.onImportComplete});
+  const ImportExportPage({super.key, this.onImportComplete, this.showExportSection = true});
 
   final VoidCallback? onImportComplete;
+
+  /// False from the welcome flow: there's no vault to export yet on a
+  /// fresh install, so offering that button there was always a dead end.
+  final bool showExportSection;
 
   @override
   State<ImportExportPage> createState() => _ImportExportPageState();
@@ -159,21 +163,23 @@ class _ImportExportPageState extends State<ImportExportPage> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            Text('EXPORTAR BÓVEDA', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 8),
-            Text(
-              'Exporta tu bóveda a un archivo cifrado para guardarlo de forma segura.',
-              style: theme.textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isBusy ? null : _export,
-                child: const Text('Exportar'),
+            if (widget.showExportSection) ...[
+              Text('EXPORTAR BÓVEDA', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              Text(
+                'Exporta tu bóveda a un archivo cifrado para guardarlo de forma segura.',
+                style: theme.textTheme.bodyMedium,
               ),
-            ),
-            const SizedBox(height: 32),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isBusy ? null : _export,
+                  child: const Text('Exportar'),
+                ),
+              ),
+              const SizedBox(height: 32),
+            ],
             Text('IMPORTAR BÓVEDA', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             Text(

@@ -91,4 +91,16 @@ class AuthRepositoryImpl implements AuthRepository {
     wipe(verification.vaultKey);
     return setupMasterPassword(newPassword);
   }
+
+  @override
+  Future<AuthResult> deleteVault({required String password}) async {
+    final verification = await verifyMasterPassword(password);
+    if (verification is! AuthSuccess) return verification;
+    // Deleting the auth header needs no key at all, so this wipes it before
+    // returning — callers here should only check success/failure, never
+    // read .vaultKey off the result.
+    wipe(verification.vaultKey);
+    await _local.delete();
+    return verification;
+  }
 }
