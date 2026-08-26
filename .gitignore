@@ -59,9 +59,6 @@ android/key.properties
 # Local environment / secrets
 *.env
 
-# Generated Windows platform (regenerated later via `flutter create --platforms=windows .`)
-/windows/
-
 # Flutter tooling metadata (SDK revision/channel used to scaffold the
 # project) — internal to local tooling, not meaningful to anyone cloning
 # the repo.

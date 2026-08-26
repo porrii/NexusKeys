@@ -41,10 +41,6 @@ El script instala:
   "runner" nativo de la app de escritorio.
 - **Git**.
 
-Nota: en el momento de escribir esto, el proyecto todavía no tiene generada la carpeta
-`windows/` (los archivos de la plataforma de escritorio). El primer paso al compilar aquí será
-generarla con `flutter create --platforms=windows .` desde la raíz del repositorio.
-
 ## Instalación manual (si no quieres usar el script)
 
 1. Instala [Flutter](https://docs.flutter.dev/get-started/install/windows) (canal `stable`) y
@@ -57,10 +53,9 @@ generarla con `flutter create --platforms=windows .` desde la raíz del reposito
 
 ## Compilar
 
-Desde la raíz del repositorio (después de generar `windows/` si aún no existe):
+Desde la raíz del repositorio:
 
 ```
-flutter create --platforms=windows .
 flutter build windows --release
 ```
 
