@@ -6,9 +6,18 @@ máquina nueva.
 ## Opción rápida: script automático
 
 Ejecuta [`install-windows-toolchain.bat`](install-windows-toolchain.bat) (doble clic, o desde una
-terminal). Te pedirá una carpeta donde instalarlo todo y se encargará del resto. La instalación de
-Visual Studio Build Tools es la parte más larga (varios GB, puede tardar bastante según la
-conexión). Al terminar, **abre una terminal nueva** y ejecuta:
+terminal). Se relanza solo pidiendo permisos de administrador si hace falta (Visual Studio los
+necesita), te pedirá una carpeta donde instalar lo que falte, y se encargará del resto. La
+instalación de Visual Studio Build Tools es la parte más larga (varios GB, puede tardar bastante
+según la conexión).
+
+El script **detecta lo que ya tienes instalado** (Git, Flutter, y si ya existe una instalación de
+Visual Studio con la carga C++ de escritorio, vía `vswhere`) y no lo reinstala; si algún paso falla
+continúa con el resto en vez de abortar, y al final muestra un resumen de qué quedó listo y qué
+necesita revisión manual. Puedes volver a ejecutarlo las veces que haga falta. Cada ejecución deja
+un `install-log.txt` con el detalle completo en la carpeta que elijas.
+
+Al terminar, **abre una terminal nueva** y ejecuta:
 
 ```
 flutter doctor

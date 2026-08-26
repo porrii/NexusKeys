@@ -5,8 +5,17 @@ Todo lo necesario para compilar NexusKeys para Android desde cero en una máquin
 ## Opción rápida: script automático
 
 Ejecuta [`install-android-toolchain.bat`](install-android-toolchain.bat) (doble clic, o desde una
-terminal). Te pedirá una carpeta donde instalarlo todo y se encargará del resto. Al terminar,
-**abre una terminal nueva** (para que las variables de entorno surtan efecto) y ejecuta:
+terminal). Te pedirá una carpeta donde instalar lo que falte y se encargará del resto.
+
+El script **detecta lo que ya tienes instalado** (por `JAVA_HOME`/`ANDROID_HOME` o el `PATH`) y no
+lo reinstala; si algún paso falla (sin conexión, descarga corrupta, permisos...) continúa con el
+resto en vez de abortar, y al final muestra un resumen de qué quedó listo y qué necesita revisión
+manual. Puedes volver a ejecutarlo las veces que haga falta — es seguro, no repite lo que ya
+funcionó. Cada ejecución deja un `install-log.txt` con el detalle completo en la carpeta que
+elijas.
+
+Al terminar, **abre una terminal nueva** (para que las variables de entorno surtan efecto) y
+ejecuta:
 
 ```
 flutter doctor
