@@ -6,7 +6,14 @@ rem instalarse. Si no los tenemos, nos relanzamos a nosotros mismos con UAC.
 net session >nul 2>&1
 if %errorLevel% neq 0 (
     echo Se necesitan permisos de administrador. Solicitando elevacion...
-    powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
+    powershell -NoProfile -Command "try { Start-Process -FilePath '%~f0' -Verb RunAs -ErrorAction Stop } catch { Write-Host 'No se concedieron permisos de administrador.' -ForegroundColor Red; exit 1 }"
+    if errorlevel 1 (
+        echo.
+        echo No se pudo obtener permisos de administrador ^(cancelaste el aviso de UAC,
+        echo o esta bloqueado por politica^). Vuelve a ejecutar este .bat y acepta el
+        echo aviso, o hazlo tu mismo con boton derecho ^> Ejecutar como administrador.
+        pause
+    )
     exit /b
 )
 
@@ -37,6 +44,12 @@ if "%INSTALL_DIR%"=="" (
     pause
     exit /b 1
 )
+
+rem Quita una barra invertida final si la hay (p.ej. "D:\DevTools\") - si no,
+rem la comilla de cierre que rodea a %INSTALL_DIR% al pasarlo a PowerShell
+rem quedaria escapada por esa barra en vez de cerrar la cadena, y PowerShell
+rem recibiria la ruta con una comilla suelta pegada al final.
+if "%INSTALL_DIR:~-1%"=="\" set "INSTALL_DIR=%INSTALL_DIR:~0,-1%"
 
 if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
 

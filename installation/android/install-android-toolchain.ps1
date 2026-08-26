@@ -16,111 +16,15 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$script:results = [ordered]@{}
+. (Join-Path $PSScriptRoot "..\common.ps1")
+
 $script:MinFreeGB = 8
-
-# --------------------------------------------------------------------------
-# Utilidades
-# --------------------------------------------------------------------------
-
-function Write-Step($msg) {
-    Write-Host ""
-    Write-Host "==> $msg" -ForegroundColor Cyan
-}
-
-function Write-Ok($msg) { Write-Host "    [OK] $msg" -ForegroundColor Green }
-function Write-Skip($msg) { Write-Host "    [YA ESTABA] $msg" -ForegroundColor Yellow }
-function Write-Fail($msg) { Write-Host "    [FALLO] $msg" -ForegroundColor Red }
-
-function Test-CommandExists($name) {
-    return [bool](Get-Command $name -ErrorAction SilentlyContinue)
-}
-
-# Ejecuta un comando nativo capturando stdout+stderr sin que reviente.
-# En PowerShell 5.1, con $ErrorActionPreference = "Stop" (fijado al
-# principio de este script), CUALQUIER salida por stderr de un comando
-# nativo - incluidos mensajes normales sin error real, como el propio
-# "Cloning into..." de git o el banner de version de java, que Java
-# escribe a stderr por diseno - se convierte en un NativeCommandError
-# que aborta el script aunque el comando termine con exito. Esta
-# funcion aisla ese comportamiento en un unico sitio bien probado en
-# vez de repetir el workaround en cada llamada.
-function Invoke-Native {
-    param(
-        [Parameter(Mandatory = $true)][string]$FilePath,
-        [string[]]$ArgumentList = @(),
-        [string]$StdIn = $null
-    )
-    $prevEAP = $ErrorActionPreference
-    $ErrorActionPreference = "Continue"
-    try {
-        if ($StdIn) {
-            $lines = $StdIn | & $FilePath @ArgumentList 2>&1
-        } else {
-            $lines = & $FilePath @ArgumentList 2>&1
-        }
-        $exitCode = $LASTEXITCODE
-        $text = ($lines | ForEach-Object { "$_" }) -join "`n"
-        return @{ Output = $text; ExitCode = $exitCode; Success = ($exitCode -eq 0 -or $null -eq $exitCode) }
-    } catch {
-        return @{ Output = "$_"; ExitCode = -1; Success = $false }
-    } finally {
-        $ErrorActionPreference = $prevEAP
-    }
-}
 
 function Get-JavaMajorVersion([string]$javaExe) {
     if (-not (Test-Path $javaExe)) { return $null }
     $r = Invoke-Native -FilePath $javaExe -ArgumentList @("-version")
     if ($r.Output -match 'version "?(\d+)') { return [int]$Matches[1] }
     return $null
-}
-
-# Descarga con reintentos y backoff exponencial. Devuelve $true/$false.
-function Invoke-DownloadWithRetry {
-    param(
-        [string]$Uri,
-        [string]$OutFile,
-        [int]$MaxRetries = 3
-    )
-    for ($i = 1; $i -le $MaxRetries; $i++) {
-        try {
-            Write-Host "    Descargando (intento $i/$MaxRetries): $Uri"
-            Invoke-WebRequest -Uri $Uri -OutFile $OutFile -UseBasicParsing -TimeoutSec 180
-            $size = (Get-Item $OutFile -ErrorAction SilentlyContinue).Length
-            if ($size -gt 0) {
-                Write-Ok "Descargado ($([math]::Round($size / 1MB, 1)) MB)"
-                return $true
-            }
-            throw "El archivo descargado esta vacio"
-        } catch {
-            Write-Fail "Intento $i fallido: $($_.Exception.Message)"
-            Remove-Item $OutFile -Force -ErrorAction SilentlyContinue
-            if ($i -lt $MaxRetries) {
-                $wait = [math]::Pow(2, $i)
-                Write-Host "    Reintentando en $wait s..."
-                Start-Sleep -Seconds $wait
-            }
-        }
-    }
-    return $false
-}
-
-function Test-ZipValid([string]$path) {
-    try {
-        $zip = [System.IO.Compression.ZipFile]::OpenRead($path)
-        $zip.Dispose()
-        return $true
-    } catch {
-        return $false
-    }
-}
-
-function Test-FreeSpace([string]$path, [int]$minGB) {
-    $drive = (Resolve-Path (Split-Path $path -Qualifier)).Path
-    $freeBytes = (Get-PSDrive -Name $drive.TrimEnd(':', '\')).Free
-    $freeGB = [math]::Round($freeBytes / 1GB, 1)
-    return @{ FreeGB = $freeGB; Enough = ($freeGB -ge $minGB) }
 }
 
 # --------------------------------------------------------------------------
@@ -157,35 +61,7 @@ if (-not $space.Enough) {
 # 1. Git
 # --------------------------------------------------------------------------
 
-Write-Step "Comprobando Git..."
-$gitFound = Test-CommandExists "git"
-if ($gitFound -and -not $Force) {
-    $v = (Invoke-Native -FilePath "git" -ArgumentList @("--version")).Output
-    Write-Skip "Git ya esta instalado ($v)"
-    $script:results["Git"] = "Ya instalado ($v)"
-} else {
-    if (Test-CommandExists "winget") {
-        Write-Host "    Instalando Git con winget..."
-        try {
-            winget install --id Git.Git -e --source winget --accept-source-agreements --accept-package-agreements --silent
-            $env:Path = "$env:Path;$env:ProgramFiles\Git\cmd"
-            if (Test-CommandExists "git") {
-                Write-Ok "Git instalado correctamente"
-                $script:results["Git"] = "Instalado con winget"
-            } else {
-                throw "git sigue sin encontrarse tras la instalacion"
-            }
-        } catch {
-            Write-Fail "No se pudo instalar Git con winget: $($_.Exception.Message)"
-            Write-Host "    Plan B: descarga manual desde https://git-scm.com/download/win" -ForegroundColor Yellow
-            $script:results["Git"] = "FALLO - instalar manualmente desde git-scm.com"
-        }
-    } else {
-        Write-Fail "winget no esta disponible en esta maquina."
-        Write-Host "    Instala Git manualmente desde https://git-scm.com/download/win y vuelve a ejecutar este script." -ForegroundColor Yellow
-        $script:results["Git"] = "FALLO - winget no disponible, instalar manualmente"
-    }
-}
+$gitFound = Install-GitIfMissing -Force:$Force
 
 # --------------------------------------------------------------------------
 # 2. JDK 17
@@ -199,17 +75,30 @@ if ($env:JAVA_HOME -and (Get-JavaMajorVersion (Join-Path $env:JAVA_HOME "bin\jav
     $javaHome = $env:JAVA_HOME
 }
 
-# b) Ubicaciones habituales de instalaciones existentes
+# b) Ubicaciones habituales de instalaciones existentes. Cada entrada es o
+# bien una carpeta que ES DIRECTAMENTE un JDK home (su bin\java.exe cuelga
+# justo debajo, como el JBR que trae Android Studio), o bien una carpeta que
+# CONTIENE subcarpetas versionadas tipo jdk-17.x.x (como el layout habitual
+# de Temurin/Eclipse Adoptium bajo Program Files).
 if (-not $javaHome) {
-    $candidateRoots = @(
+    $directCandidates = @(
+        "$env:ProgramFiles\Android\Android Studio\jbr"
+    )
+    foreach ($root in $directCandidates) {
+        if ((Get-JavaMajorVersion (Join-Path $root "bin\java.exe")) -eq 17) {
+            $javaHome = $root
+            break
+        }
+    }
+
+    $containerCandidates = @(
         "$env:ProgramFiles\Eclipse Adoptium",
         "$env:ProgramFiles\Java",
         "$env:ProgramFiles\Microsoft",
-        "$env:ProgramFiles\Android\Android Studio\jbr",
-        (Join-Path $InstallDir "")
+        $InstallDir
     )
-    foreach ($root in $candidateRoots) {
-        if (-not (Test-Path $root)) { continue }
+    foreach ($root in $containerCandidates) {
+        if ($javaHome -or -not (Test-Path $root)) { continue }
         $dirs = Get-ChildItem -Path $root -Directory -ErrorAction SilentlyContinue |
             Where-Object { $_.Name -match 'jdk-?17' }
         foreach ($d in $dirs) {
@@ -218,7 +107,6 @@ if (-not $javaHome) {
                 break
             }
         }
-        if ($javaHome) { break }
     }
 }
 
@@ -232,7 +120,7 @@ if (-not $javaHome -and (Test-CommandExists "java")) {
 
 if ($javaHome -and -not $Force) {
     Write-Skip "JDK 17 ya disponible en $javaHome"
-    $script:results["JDK 17"] = "Ya instalado en $javaHome"
+    Add-Result "JDK 17" "Ya instalado en $javaHome"
 } else {
     Write-Host "    Descargando Temurin JDK 17..."
     $jdkZip = Join-Path $InstallDir "temurin17.zip"
@@ -242,14 +130,23 @@ if ($javaHome -and -not $Force) {
     if (-not $downloaded) {
         Write-Fail "No se pudo descargar el JDK tras varios intentos."
         Write-Host "    Plan B: descargalo a mano desde https://adoptium.net/temurin/releases/?version=17 y define JAVA_HOME." -ForegroundColor Yellow
-        $script:results["JDK 17"] = "FALLO - descargar manualmente desde adoptium.net"
+        Add-Result "JDK 17" "FALLO - descargar manualmente desde adoptium.net" $true
     } elseif (-not (Test-ZipValid $jdkZip)) {
         Write-Fail "El archivo descargado no es un zip valido (descarga corrupta)."
         Remove-Item $jdkZip -Force -ErrorAction SilentlyContinue
-        $script:results["JDK 17"] = "FALLO - descarga corrupta, reintenta el script"
+        Add-Result "JDK 17" "FALLO - descarga corrupta, reintenta el script" $true
     } else {
         try {
             Write-Host "    Extrayendo JDK..."
+            # Limpia extracciones previas de una version distinta antes de
+            # descomprimir la nueva - si no, un -Force en una fecha
+            # posterior (la URL de Adoptium siempre apunta a "latest", asi
+            # que puede traer una version distinta) deja ambas carpetas en
+            # disco y la seleccion de cual usar como JAVA_HOME pasa a
+            # depender del orden alfabetico, no de cual es la nueva.
+            Get-ChildItem -Path $InstallDir -Directory -ErrorAction SilentlyContinue |
+                Where-Object { $_.Name -like "jdk-17*" } |
+                Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
             Expand-Archive -Path $jdkZip -DestinationPath $InstallDir -Force
             Remove-Item $jdkZip -Force
             $jdkDir = Get-ChildItem -Path $InstallDir -Directory | Where-Object { $_.Name -like "jdk-17*" } | Select-Object -First 1
@@ -259,10 +156,10 @@ if ($javaHome -and -not $Force) {
                 throw "java.exe extraido no reporta version 17"
             }
             Write-Ok "JDK 17 instalado en $javaHome"
-            $script:results["JDK 17"] = "Instalado en $javaHome"
+            Add-Result "JDK 17" "Instalado en $javaHome"
         } catch {
             Write-Fail "Error extrayendo/verificando el JDK: $($_.Exception.Message)"
-            $script:results["JDK 17"] = "FALLO - $($_.Exception.Message)"
+            Add-Result "JDK 17" "FALLO - $($_.Exception.Message)" $true
             $javaHome = $null
         }
     }
@@ -283,7 +180,8 @@ function Find-SdkManager([string]$root) {
     return $found
 }
 
-$existingRoots = @($env:ANDROID_HOME, $env:ANDROID_SDK_ROOT, "$env:LOCALAPPDATA\Android\Sdk") | Where-Object { $_ }
+$existingRoots = @($env:ANDROID_HOME, $env:ANDROID_SDK_ROOT, "$env:LOCALAPPDATA\Android\Sdk") |
+    Where-Object { $_ } | Select-Object -Unique
 foreach ($root in $existingRoots) {
     $sm = Find-SdkManager $root
     $adb = Join-Path $root "platform-tools\adb.exe"
@@ -296,7 +194,7 @@ foreach ($root in $existingRoots) {
 
 if ($sdkRoot -and -not $Force) {
     Write-Skip "Android SDK ya disponible en $sdkRoot"
-    $script:results["Android SDK"] = "Ya instalado en $sdkRoot"
+    Add-Result "Android SDK" "Ya instalado en $sdkRoot"
 } else {
     Write-Host "    Descargando Android command-line tools..."
     $sdkRoot = Join-Path $InstallDir "Android\Sdk"
@@ -310,7 +208,7 @@ if ($sdkRoot -and -not $Force) {
         Write-Host "    Plan B: descargalas a mano desde https://developer.android.com/studio#command-tools" -ForegroundColor Yellow
         Write-Host "    y colocalas en $sdkRoot\cmdline-tools\latest\" -ForegroundColor Yellow
         Remove-Item $cmdlineZip -Force -ErrorAction SilentlyContinue
-        $script:results["Android SDK"] = "FALLO - instalar cmdline-tools manualmente"
+        Add-Result "Android SDK" "FALLO - instalar cmdline-tools manualmente" $true
     } else {
         try {
             $cmdlineToolsRoot = Join-Path $sdkRoot "cmdline-tools"
@@ -346,10 +244,10 @@ if ($sdkRoot -and -not $Force) {
             if (-not (Test-Path $adb)) { throw "adb.exe no aparecio tras instalar platform-tools" }
 
             Write-Ok "Android SDK instalado en $sdkRoot"
-            $script:results["Android SDK"] = "Instalado en $sdkRoot"
+            Add-Result "Android SDK" "Instalado en $sdkRoot"
         } catch {
             Write-Fail "Error configurando el Android SDK: $($_.Exception.Message)"
-            $script:results["Android SDK"] = "FALLO - $($_.Exception.Message)"
+            Add-Result "Android SDK" "FALLO - $($_.Exception.Message)" $true
         }
     }
 }
@@ -362,43 +260,7 @@ Write-Host "    automaticamente la primera vez que hacen falta (licencias ya ace
 # 4. Flutter SDK
 # --------------------------------------------------------------------------
 
-Write-Step "Comprobando Flutter..."
-$flutterDir = $null
-
-if ((Test-CommandExists "flutter") -and -not $Force) {
-    $flutterCmd = (Get-Command flutter).Source
-    $flutterDir = Split-Path (Split-Path $flutterCmd)
-    $v = ((Invoke-Native -FilePath "flutter" -ArgumentList @("--version")).Output -split "`n" | Select-Object -First 1)
-    Write-Skip "Flutter ya esta instalado en $flutterDir ($v)"
-    $script:results["Flutter"] = "Ya instalado en $flutterDir"
-}
-
-if (-not $flutterDir) {
-    $flutterDir = Join-Path $InstallDir "flutter"
-    if ((Test-Path (Join-Path $flutterDir "bin\flutter.bat")) -and -not $Force) {
-        Write-Skip "Ya existe una copia de Flutter en $flutterDir"
-        $script:results["Flutter"] = "Ya instalado en $flutterDir"
-    } elseif (-not $gitFound -and -not (Test-CommandExists "git")) {
-        Write-Fail "Git no esta disponible, no se puede clonar Flutter."
-        Write-Host "    Plan B: descarga el SDK como zip desde https://docs.flutter.dev/get-started/install/windows" -ForegroundColor Yellow
-        $script:results["Flutter"] = "FALLO - instalar Git primero, o descargar Flutter como zip"
-    } else {
-        Write-Host "    Clonando el SDK de Flutter (canal stable)..."
-        try {
-            if (Test-Path $flutterDir) { Remove-Item $flutterDir -Recurse -Force }
-            $cloneResult = Invoke-Native -FilePath "git" -ArgumentList @("clone", "--depth", "1", "https://github.com/flutter/flutter.git", "-b", "stable", $flutterDir)
-            if (-not (Test-Path (Join-Path $flutterDir "bin\flutter.bat"))) {
-                throw "flutter.bat no aparecio tras clonar (git salio con codigo $($cloneResult.ExitCode)): $($cloneResult.Output)"
-            }
-            Write-Ok "Flutter clonado en $flutterDir"
-            $script:results["Flutter"] = "Instalado en $flutterDir"
-        } catch {
-            Write-Fail "Error clonando Flutter: $($_.Exception.Message)"
-            Write-Host "    Plan B: descarga el SDK como zip desde https://docs.flutter.dev/get-started/install/windows" -ForegroundColor Yellow
-            $script:results["Flutter"] = "FALLO - $($_.Exception.Message)"
-        }
-    }
-}
+$flutterDir = Install-FlutterIfMissing -InstallDir $InstallDir -GitAvailable $gitFound -Force:$Force
 
 # --------------------------------------------------------------------------
 # 5. Variables de entorno persistentes
@@ -412,7 +274,6 @@ try {
         [System.Environment]::SetEnvironmentVariable("ANDROID_SDK_ROOT", $sdkRoot, "User")
     }
 
-    $oldPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
     $additions = @()
     if ($flutterDir) { $additions += (Join-Path $flutterDir "bin") }
     if ($javaHome) { $additions += (Join-Path $javaHome "bin") }
@@ -421,15 +282,11 @@ try {
         $latestTools = Join-Path $sdkRoot "cmdline-tools\latest\bin"
         if (Test-Path $latestTools) { $additions += $latestTools }
     }
-    foreach ($a in $additions) {
-        if ($oldPath -notlike "*$a*") { $oldPath = "$oldPath;$a" }
-        if ($env:Path -notlike "*$a*") { $env:Path = "$env:Path;$a" }
-    }
-    [System.Environment]::SetEnvironmentVariable("Path", $oldPath, "User")
+    Add-ToPersistentPath -Paths $additions
     Write-Ok "Variables de entorno actualizadas"
 } catch {
     Write-Fail "No se pudieron guardar las variables de entorno: $($_.Exception.Message)"
-    Write-Host "    Añadelas a mano: JAVA_HOME, ANDROID_HOME, ANDROID_SDK_ROOT y el PATH." -ForegroundColor Yellow
+    Write-Host "    Anadelas a mano: JAVA_HOME, ANDROID_HOME, ANDROID_SDK_ROOT y el PATH." -ForegroundColor Yellow
 }
 
 # --------------------------------------------------------------------------
@@ -441,38 +298,9 @@ if ($flutterDir -and (Test-Path (Join-Path $flutterDir "bin\flutter.bat"))) {
     & "$flutterDir\bin\flutter.bat" doctor
 }
 
-# --------------------------------------------------------------------------
-# Resumen final
-# --------------------------------------------------------------------------
-
-Write-Host ""
-Write-Host "================================================================" -ForegroundColor Magenta
-Write-Host " RESUMEN" -ForegroundColor Magenta
-Write-Host "================================================================" -ForegroundColor Magenta
-
-$hasFailure = $false
-foreach ($key in $script:results.Keys) {
-    $value = $script:results[$key]
-    if ($value -like "FALLO*") {
-        Write-Host ("  {0,-14}: {1}" -f $key, $value) -ForegroundColor Red
-        $hasFailure = $true
-    } else {
-        Write-Host ("  {0,-14}: {1}" -f $key, $value) -ForegroundColor Green
-    }
-}
-
-Write-Host ""
-if ($hasFailure) {
-    Write-Host "Algunos componentes necesitan atencion manual (ver arriba y en $logFile)." -ForegroundColor Yellow
-    Write-Host "Puedes volver a ejecutar este script las veces que haga falta: lo que" -ForegroundColor Yellow
-    Write-Host "ya este instalado correctamente se detecta y no se reinstala." -ForegroundColor Yellow
-} else {
-    Write-Host "Todo listo." -ForegroundColor Green
-}
-Write-Host "Abre una terminal NUEVA para que las variables de entorno surtan efecto," -ForegroundColor Green
-Write-Host "y ejecuta 'flutter doctor' otra vez para confirmarlo." -ForegroundColor Green
+Write-InstallSummary
 Write-Host "Registro completo guardado en: $logFile"
 
 Stop-Transcript | Out-Null
 
-if ($hasFailure) { exit 1 } else { exit 0 }
+if ($script:hasFailure) { exit 1 } else { exit 0 }

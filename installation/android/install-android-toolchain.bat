@@ -29,6 +29,12 @@ if "%INSTALL_DIR%"=="" (
     exit /b 1
 )
 
+rem Quita una barra invertida final si la hay (p.ej. "D:\DevTools\") - si no,
+rem la comilla de cierre que rodea a %INSTALL_DIR% al pasarlo a PowerShell
+rem quedaria escapada por esa barra en vez de cerrar la cadena, y PowerShell
+rem recibiria la ruta con una comilla suelta pegada al final.
+if "%INSTALL_DIR:~-1%"=="\" set "INSTALL_DIR=%INSTALL_DIR:~0,-1%"
+
 if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
 
 echo.
