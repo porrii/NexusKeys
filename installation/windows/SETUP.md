@@ -59,4 +59,18 @@ Desde la raíz del repositorio:
 flutter build windows --release
 ```
 
-El ejecutable se genera dentro de `build\windows\x64\runner\Release\`.
+El ejecutable y sus DLLs se generan juntos dentro de `build\windows\x64\runner\Release\` — hay que
+distribuir toda esa carpeta, no solo el `.exe`.
+
+## Problema conocido: error de deprecación de coroutines en MSVC
+
+Con ciertas versiones de Visual Studio/MSVC, la compilación puede fallar por un error de
+deprecación relacionado con `<experimental/coroutine>` (usado internamente por el motor de Flutter
+o alguna dependencia nativa). `windows/CMakeLists.txt` ya trae el fix aplicado:
+
+```cmake
+add_definitions(-D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+```
+
+Si compilas desde cero y te encuentras este error, comprueba que esa línea siga presente en
+`windows/CMakeLists.txt` (justo después de `add_definitions(-DUNICODE -D_UNICODE)`).
