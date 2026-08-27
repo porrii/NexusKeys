@@ -66,7 +66,14 @@ class VaultDetailPane extends StatelessWidget {
 
     if (item == null) {
       return Center(
-        child: Text('Selecciona un elemento', style: theme.textTheme.bodyMedium),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.description_outlined, size: 56, color: theme.dividerColor),
+            const SizedBox(height: 12),
+            Text('Selecciona un elemento', style: theme.textTheme.bodyMedium),
+          ],
+        ),
       );
     }
 

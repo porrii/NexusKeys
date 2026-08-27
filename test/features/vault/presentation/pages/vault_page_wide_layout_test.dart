@@ -233,7 +233,7 @@ void main() {
     expect(find.text('GitHub'), findsNothing);
   });
 
-  testWidgets('the Etiqueta sidebar entry opens TagsPage', (tester) async {
+  testWidgets('the Etiqueta sidebar entry embeds TagsPage without covering the sidebar', (tester) async {
     useWideViewport(tester);
 
     await tester.pumpWidget(wrap(const VaultPage()));
@@ -242,9 +242,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Ningún elemento tiene etiquetas todavía'), findsOneWidget);
+    // A pushed route (the old behavior) would have covered the sidebar.
+    expect(find.text('Bóveda'), findsOneWidget);
+    expect(find.text('Ajustes'), findsOneWidget);
   });
 
-  testWidgets('the Papelera sidebar entry opens TrashPage', (tester) async {
+  testWidgets('the Papelera sidebar entry embeds TrashPage without covering the sidebar', (tester) async {
     useWideViewport(tester);
 
     await tester.pumpWidget(wrap(const VaultPage()));
@@ -253,6 +256,44 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('La papelera está vacía'), findsOneWidget);
+    expect(find.text('Bóveda'), findsOneWidget);
+    expect(find.text('Ajustes'), findsOneWidget);
+  });
+
+  testWidgets('the Ajustes sidebar entry embeds SettingsPage without covering the sidebar', (tester) async {
+    useWideViewport(tester);
+
+    await tester.pumpWidget(wrap(const VaultPage()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ajustes'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('SEGURIDAD'), findsOneWidget);
+    // Sidebar-only footer text — SettingsPage's own body also has tiles
+    // titled "Bóveda"/"Papelera", so those aren't unique enough here.
+    expect(find.text('Bóveda bloqueada'), findsOneWidget);
+  });
+
+  testWidgets('switching sidebar sections clears a previously-selected item', (tester) async {
+    useWideViewport(tester);
+    fakeRepository.seed([item(id: 1, title: 'GitHub', username: 'ivan_dev')]);
+
+    await tester.pumpWidget(wrap(const VaultPage()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('GitHub'));
+    await tester.pumpAndSettle();
+    expect(find.text('Selecciona un elemento'), findsNothing);
+
+    // Away and back to a list-based section — the item selected before
+    // leaving must not still be showing, even though it's still in the
+    // (unfiltered) repository the detail pane resolves selections against.
+    await tester.tap(find.text('Favoritos'));
+    await tester.pumpAndSettle();
+    expect(find.text('Selecciona un elemento'), findsOneWidget);
+
+    await tester.tap(find.text('Bóveda'));
+    await tester.pumpAndSettle();
+    expect(find.text('Selecciona un elemento'), findsOneWidget);
   });
 
   testWidgets('the sidebar lock control calls onLock', (tester) async {

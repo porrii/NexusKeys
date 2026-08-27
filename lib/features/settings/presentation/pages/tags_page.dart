@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/di/service_locator.dart';
+import '../../../../core/widgets/embedded_section_header.dart';
 import '../../../vault/domain/entities/vault_item_type.dart';
 import '../../../vault/domain/repositories/vault_repository.dart';
 
@@ -19,7 +20,12 @@ import '../../../vault/domain/repositories/vault_repository.dart';
 /// ahead of the wide-screen layout that will surface it directly in that
 /// sidebar.
 class TagsPage extends StatefulWidget {
-  const TagsPage({super.key});
+  const TagsPage({super.key, this.embedded = false});
+
+  /// True on wide layouts (img/13_tablet.png, img/14_windows.png), where
+  /// this renders inline next to the sidebar instead of behind its own
+  /// Scaffold/AppBar reached by pushing a route over everything else.
+  final bool embedded;
 
   @override
   State<TagsPage> createState() => _TagsPageState();
@@ -102,32 +108,40 @@ class _TagsPageState extends State<TagsPage> {
     final counts = _tagCounts();
     final tags = counts.keys.toList()..sort();
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Etiquetas')),
-      body: SafeArea(
-        child: tags.isEmpty
-            ? Center(
-                child: Text(
-                  'Ningún elemento tiene etiquetas todavía',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              )
-            : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: tags.length,
-                itemBuilder: (context, index) {
-                  final tag = tags[index];
-                  return _TagRow(
-                    color: VaultItemType.values[index % VaultItemType.values.length].color,
-                    label: tag,
-                    count: counts[tag]!,
-                    onRename: () => _renameTag(tag),
-                    onDelete: () => _deleteTag(tag),
-                  );
-                },
-              ),
+    final body = SafeArea(
+      top: !widget.embedded,
+      child: Column(
+        children: [
+          if (widget.embedded) const EmbeddedSectionHeader('Etiquetas'),
+          Expanded(
+            child: tags.isEmpty
+                ? Center(
+                    child: Text(
+                      'Ningún elemento tiene etiquetas todavía',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: tags.length,
+                    itemBuilder: (context, index) {
+                      final tag = tags[index];
+                      return _TagRow(
+                        color: VaultItemType.values[index % VaultItemType.values.length].color,
+                        label: tag,
+                        count: counts[tag]!,
+                        onRename: () => _renameTag(tag),
+                        onDelete: () => _deleteTag(tag),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
+
+    if (widget.embedded) return body;
+    return Scaffold(appBar: AppBar(title: const Text('Etiquetas')), body: body);
   }
 }
 

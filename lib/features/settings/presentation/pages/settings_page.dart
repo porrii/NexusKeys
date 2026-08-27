@@ -5,6 +5,7 @@ import '../../../../core/database/vault_session.dart';
 import '../../../../core/di/service_locator.dart';
 import '../../../../core/security/secure_bytes.dart';
 import '../../../../core/widgets/app_password_field.dart';
+import '../../../../core/widgets/embedded_section_header.dart';
 import '../../../auth/domain/entities/auth_result.dart';
 import '../../../auth/domain/repositories/auth_repository.dart';
 import '../../../auth/domain/services/biometric_service.dart';
@@ -21,7 +22,7 @@ import 'trash_page.dart';
 
 /// Reproduces img/08_settings.png.
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key, this.onLock, this.onVaultDeleted});
+  const SettingsPage({super.key, this.onLock, this.onVaultDeleted, this.embedded = false});
 
   /// Only used by "Importar / Exportar": a successful restore replaces the
   /// auth header this session was unlocked with, so the app has to drop
@@ -32,6 +33,13 @@ class SettingsPage extends StatefulWidget {
   /// the app can drop back to the welcome screen instead of a lock screen
   /// with nothing left to unlock.
   final VoidCallback? onVaultDeleted;
+
+  /// True on wide layouts (img/13_tablet.png, img/14_windows.png), where
+  /// this renders inline next to the sidebar instead of behind its own
+  /// Scaffold/AppBar reached by pushing a route over everything else. Its
+  /// own sub-pages (Bloqueo automático, Tema, ...) still push as full
+  /// routes over the sidebar either way — only this top-level list embeds.
+  final bool embedded;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -193,80 +201,82 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     final settings = _settings.current;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Ajustes')),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          children: [
-            const _SectionHeader('SEGURIDAD'),
-            _SettingsTile(
-              title: 'Bloqueo automático',
-              value: formatAutoLockDuration(settings.autoLockAfter),
-              onTap: () => _push(const AutoLockSettingsPage()),
-            ),
-            _SettingsTile(
-              title: 'Cambiar contraseña maestra',
-              onTap: () => _push(const ChangeMasterPasswordPage()),
-            ),
-            _SettingsTile(
-              title: 'Autenticación biométrica',
-              value: settings.biometricEnabled ? 'Activada' : 'Desactivada',
-              onTap: _toggleBiometric,
-            ),
-            _SettingsSwitchTile(
-              title: 'Bloquear al cerrar',
-              value: settings.lockOnClose,
-              onChanged: (value) async {
-                await _settings.setLockOnClose(value);
-                if (mounted) setState(() {});
-              },
-            ),
-            const _SectionHeader('GENERAL'),
-            _SettingsTile(
-              title: 'Tema',
-              value: _themeLabels[settings.themeMode],
-              onTap: () => _push(const ThemeSettingsPage()),
-            ),
-            _SettingsTile(
-              title: 'Idioma',
-              value: 'Español',
-              onTap: () => _push(const LanguageSettingsPage()),
-            ),
-            _SettingsTile(title: 'Etiquetas', onTap: () => _push(const TagsPage())),
-            _SettingsTile(title: 'Papelera', onTap: () => _push(const TrashPage())),
-            const _SectionHeader('DATOS'),
-            _SettingsTile(
-              title: 'Importar / Exportar',
-              onTap: () => _push(
-                ImportExportPage(
-                  onImportComplete: () {
-                    Navigator.of(context).popUntil((route) => route.isFirst);
-                    widget.onLock?.call();
-                  },
-                ),
+    final body = SafeArea(
+      top: !widget.embedded,
+      child: ListView(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        children: [
+          if (widget.embedded) const EmbeddedSectionHeader('Ajustes'),
+          const _SectionHeader('SEGURIDAD'),
+          _SettingsTile(
+            title: 'Bloqueo automático',
+            value: formatAutoLockDuration(settings.autoLockAfter),
+            onTap: () => _push(const AutoLockSettingsPage()),
+          ),
+          _SettingsTile(
+            title: 'Cambiar contraseña maestra',
+            onTap: () => _push(const ChangeMasterPasswordPage()),
+          ),
+          _SettingsTile(
+            title: 'Autenticación biométrica',
+            value: settings.biometricEnabled ? 'Activada' : 'Desactivada',
+            onTap: _toggleBiometric,
+          ),
+          _SettingsSwitchTile(
+            title: 'Bloquear al cerrar',
+            value: settings.lockOnClose,
+            onChanged: (value) async {
+              await _settings.setLockOnClose(value);
+              if (mounted) setState(() {});
+            },
+          ),
+          const _SectionHeader('GENERAL'),
+          _SettingsTile(
+            title: 'Tema',
+            value: _themeLabels[settings.themeMode],
+            onTap: () => _push(const ThemeSettingsPage()),
+          ),
+          _SettingsTile(
+            title: 'Idioma',
+            value: 'Español',
+            onTap: () => _push(const LanguageSettingsPage()),
+          ),
+          _SettingsTile(title: 'Etiquetas', onTap: () => _push(const TagsPage())),
+          _SettingsTile(title: 'Papelera', onTap: () => _push(const TrashPage())),
+          const _SectionHeader('DATOS'),
+          _SettingsTile(
+            title: 'Importar / Exportar',
+            onTap: () => _push(
+              ImportExportPage(
+                onImportComplete: () {
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                  widget.onLock?.call();
+                },
               ),
             ),
-            _SettingsTile(
-              title: 'Eliminar bóveda permanentemente',
-              titleColor: Theme.of(context).colorScheme.error,
-              onTap: _deleteVaultPermanently,
+          ),
+          _SettingsTile(
+            title: 'Eliminar bóveda permanentemente',
+            titleColor: Theme.of(context).colorScheme.error,
+            onTap: _deleteVaultPermanently,
+          ),
+          const _SectionHeader('ACERCA DE'),
+          _SettingsTile(
+            title: 'Licencias',
+            onTap: () => showLicensePage(
+              context: context,
+              applicationName: 'NexusKeys',
+              applicationVersion: _appVersion,
+              applicationLegalese: '© ${DateTime.now().year} Iván Bezanilla López',
             ),
-            const _SectionHeader('ACERCA DE'),
-            _SettingsTile(
-              title: 'Licencias',
-              onTap: () => showLicensePage(
-                context: context,
-                applicationName: 'NexusKeys',
-                applicationVersion: _appVersion,
-                applicationLegalese: '© ${DateTime.now().year} Iván Bezanilla López',
-              ),
-            ),
-            _AppFooter(version: _appVersion),
-          ],
-        ),
+          ),
+          _AppFooter(version: _appVersion),
+        ],
       ),
     );
+
+    if (widget.embedded) return body;
+    return Scaffold(appBar: AppBar(title: const Text('Ajustes')), body: body);
   }
 }
 

@@ -120,15 +120,6 @@ class _VaultPageState extends State<VaultPage> {
     });
   }
 
-  /// Kept for the wide layout's sidebar, which still pushes Ajustes over
-  /// itself (see VaultSidebar's doc comment) — mobile's Ajustes is a
-  /// persistent tab instead, so it never calls this.
-  void _openSettings(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => SettingsPage(onLock: widget.onLock, onVaultDeleted: widget.onVaultDeleted)),
-    );
-  }
-
   void _openCreateItem(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -190,30 +181,22 @@ class _VaultPageState extends State<VaultPage> {
     return null;
   }
 
+  /// Every section switch drops whatever was selected in the previous one —
+  /// otherwise the detail pane could keep showing an item from Bóveda after
+  /// switching to Favoritos, even though nothing in Favoritos was actually
+  /// clicked. Tags/Trash/Settings don't use `_selectedItemId` themselves,
+  /// but clearing it here too means it's already reset if the user comes
+  /// back to Bóveda/Favoritos/Recientes afterward.
   void _onSidebarSelect(BuildContext context, VaultSidebarSection section) {
-    switch (section) {
-      case VaultSidebarSection.vault:
-        setState(() {
-          _sidebarSection = section;
-          _filter = _VaultFilter.all;
-        });
-      case VaultSidebarSection.favorites:
-        setState(() {
-          _sidebarSection = section;
-          _filter = _VaultFilter.favorites;
-        });
-      case VaultSidebarSection.recent:
-        setState(() {
-          _sidebarSection = section;
-          _filter = _VaultFilter.recent;
-        });
-      case VaultSidebarSection.tags:
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TagsPage()));
-      case VaultSidebarSection.trash:
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TrashPage()));
-      case VaultSidebarSection.settings:
-        _openSettings(context);
-    }
+    setState(() {
+      _sidebarSection = section;
+      _selectedItemId = null;
+      _filter = switch (section) {
+        VaultSidebarSection.favorites => _VaultFilter.favorites,
+        VaultSidebarSection.recent => _VaultFilter.recent,
+        _ => _VaultFilter.all,
+      };
+    });
   }
 
   @override
@@ -228,9 +211,13 @@ class _VaultPageState extends State<VaultPage> {
     );
   }
 
+  /// Sidebar stays visible no matter which section is selected — every
+  /// section renders inline in the content area next to it, rather than
+  /// Etiqueta/Papelera/Ajustes pushing a route that covers the sidebar the
+  /// way they used to. Only navigation *from inside* one of those sections
+  /// (e.g. Ajustes' "Tema" sub-page) still pushes over the sidebar; this
+  /// top-level switch never does.
   Widget _buildWideLayout(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
       body: Row(
         children: [
@@ -240,83 +227,115 @@ class _VaultPageState extends State<VaultPage> {
             onCreateItem: () => _openCreateItem(context),
             onLock: () => widget.onLock?.call(),
           ),
-          SizedBox(
-            width: 340,
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (value) => setState(() => _searchQuery = value),
-                    decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.search),
-                      hintText: 'Buscar en la bóveda',
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: StreamBuilder<List<VaultItem>>(
-                    initialData: _repository.currentItems,
-                    stream: _repository.itemsStream,
-                    builder: (context, snapshot) {
-                      final source = snapshot.data ?? const <VaultItem>[];
-                      final items =
-                          _searchQuery.trim().isEmpty ? _applyFilter(source) : _applySearch(source);
-
-                      if (items.isEmpty) {
-                        return Center(
-                          child: Text(
-                            _searchQuery.trim().isEmpty ? 'Tu bóveda está vacía' : 'Sin resultados',
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                        );
-                      }
-
-                      return ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-                        itemCount: items.length,
-                        itemBuilder: (context, index) {
-                          final item = items[index];
-                          return VaultItemTile(
-                            title: item.title,
-                            subtitle: item.subtitleHint,
-                            avatarColor: item.type.color,
-                            isFavorite: item.isFavorite,
-                            onTap: () => setState(() => _selectedItemId = item.id),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-          VerticalDivider(width: 1, color: theme.dividerColor),
-          Expanded(
-            child: StreamBuilder<List<VaultItem>>(
-              initialData: _repository.currentItems,
-              stream: _repository.itemsStream,
-              builder: (context, snapshot) {
-                final items = snapshot.data ?? const <VaultItem>[];
-                final selected = _resolveSelected(items);
-                return VaultDetailPane(
-                  item: selected,
-                  onToggleFavorite: selected == null
-                      ? null
-                      : (value) {
-                          final id = selected.id;
-                          if (id != null) _repository.setFavorite(id, value);
-                        },
-                  onEdit: selected == null ? null : () => _openEditAndReturn(context, selected),
-                  onDelete: selected == null ? null : () => _deleteWithUndo(context, selected),
-                );
-              },
-            ),
-          ),
+          Expanded(child: _buildWideContent(context)),
         ],
       ),
+    );
+  }
+
+  Widget _buildWideContent(BuildContext context) {
+    switch (_sidebarSection) {
+      case VaultSidebarSection.vault:
+      case VaultSidebarSection.favorites:
+      case VaultSidebarSection.recent:
+        return _buildVaultSplitView(context);
+      case VaultSidebarSection.tags:
+        return const TagsPage(embedded: true);
+      case VaultSidebarSection.trash:
+        return const TrashPage(embedded: true);
+      case VaultSidebarSection.settings:
+        return SettingsPage(
+          embedded: true,
+          onLock: widget.onLock,
+          onVaultDeleted: widget.onVaultDeleted,
+        );
+    }
+  }
+
+  /// Bóveda/Favoritos/Recientes' shared list+detail split — img/13_tablet.png
+  /// and img/14_windows.png's persistent middle list pane and inline detail
+  /// pane on the right.
+  Widget _buildVaultSplitView(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      children: [
+        SizedBox(
+          width: 340,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (value) => setState(() => _searchQuery = value),
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.search),
+                    hintText: 'Buscar en la bóveda',
+                  ),
+                ),
+              ),
+              Expanded(
+                child: StreamBuilder<List<VaultItem>>(
+                  initialData: _repository.currentItems,
+                  stream: _repository.itemsStream,
+                  builder: (context, snapshot) {
+                    final source = snapshot.data ?? const <VaultItem>[];
+                    final items =
+                        _searchQuery.trim().isEmpty ? _applyFilter(source) : _applySearch(source);
+
+                    if (items.isEmpty) {
+                      return Center(
+                        child: Text(
+                          _searchQuery.trim().isEmpty ? 'Tu bóveda está vacía' : 'Sin resultados',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      );
+                    }
+
+                    return ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                      itemCount: items.length,
+                      itemBuilder: (context, index) {
+                        final item = items[index];
+                        return VaultItemTile(
+                          title: item.title,
+                          subtitle: item.subtitleHint,
+                          avatarColor: item.type.color,
+                          isFavorite: item.isFavorite,
+                          onTap: () => setState(() => _selectedItemId = item.id),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        VerticalDivider(width: 1, color: theme.dividerColor),
+        Expanded(
+          child: StreamBuilder<List<VaultItem>>(
+            initialData: _repository.currentItems,
+            stream: _repository.itemsStream,
+            builder: (context, snapshot) {
+              final items = snapshot.data ?? const <VaultItem>[];
+              final selected = _resolveSelected(items);
+              return VaultDetailPane(
+                item: selected,
+                onToggleFavorite: selected == null
+                    ? null
+                    : (value) {
+                        final id = selected.id;
+                        if (id != null) _repository.setFavorite(id, value);
+                      },
+                onEdit: selected == null ? null : () => _openEditAndReturn(context, selected),
+                onDelete: selected == null ? null : () => _deleteWithUndo(context, selected),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
