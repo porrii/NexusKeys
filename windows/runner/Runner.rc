@@ -89,7 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "Iv\341n Bezanilla L\363pez" "\0"
+            // Left empty on purpose: path_provider_windows builds the
+            // per-user app-data folder as CompanyName\ProductName when
+            // CompanyName is set, or just ProductName when it's empty/null
+            // (see path_provider_windows_real.dart). Leaving it out gives
+            // %APPDATA%\NexusKeys\ directly instead of nesting it under an
+            // extra author-name folder.
+            VALUE "CompanyName", "" "\0"
             VALUE "FileDescription", "NexusKeys" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "NexusKeys" "\0"
