@@ -27,7 +27,7 @@
 ; cualquier riesgo de que el nombre salga con caracteres corruptos en el
 ; instalador o en "Aplicaciones y caracteristicas".
 #define MyAppName "NexusKeys"
-#define MyAppVersion "1.2.0"
+#define MyAppVersion "1.2.1"
 #define MyAppPublisher "Ivan Bezanilla Lopez"
 #define MyAppExeName "nexuskeys.exe"
 #define MyAppIcoName "app_icon.ico"
@@ -38,6 +38,12 @@
 ; ofrecer actualizar/reinstalar sobre la anterior.
 AppId={{8D4F0501-3DCE-4864-808C-FC8C69BDC6CF}
 AppName={#MyAppName}
+; Sin esto, Inno Setup usa por defecto "{#MyAppName} {#MyAppVersion}" como
+; nombre para mostrar - que es lo que hacia que "Aplicaciones y
+; caracteristicas" mostrase "NexusKeys version 1.2.0" en la columna Nombre
+; en vez de solo "NexusKeys" (la version ya se muestra aparte, en su propia
+; columna, a partir de AppVersion).
+AppVerName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\{#MyAppName}

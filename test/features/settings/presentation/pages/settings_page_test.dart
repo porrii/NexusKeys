@@ -50,6 +50,9 @@ class _FakeVaultKeyStore implements VaultKeyStore {
 
   @override
   Future<void> clear() async => stored = null;
+
+  @override
+  bool get hasWarmedUpCipher => false;
 }
 
 /// verifyMasterPassword and deleteVault are both exercised from
@@ -182,8 +185,12 @@ void main() {
     expect(find.text('Bloqueo automático'), findsOneWidget);
     expect(find.text('5 minutos'), findsOneWidget);
     expect(find.text('Cambiar contraseña maestra'), findsOneWidget);
-    expect(find.text('Autenticación biométrica'), findsOneWidget);
-    expect(find.text('Desactivada'), findsOneWidget);
+    if (Platform.isWindows) {
+      expect(find.text('Autenticación biométrica'), findsNothing);
+    } else {
+      expect(find.text('Autenticación biométrica'), findsOneWidget);
+      expect(find.text('Desactivada'), findsOneWidget);
+    }
     expect(find.text('Bloquear al cerrar'), findsOneWidget);
     expect(find.text('GENERAL'), findsOneWidget);
     expect(find.text('Tema'), findsOneWidget);
@@ -243,63 +250,90 @@ void main() {
     expect(find.text('La papelera está vacía'), findsOneWidget);
   });
 
-  testWidgets('Autenticación biométrica warns when the device has no biometric support', (tester) async {
-    fakeBiometricService.supported = false;
+  // These four exercise the "Autenticación biométrica" tile, which no
+  // longer renders at all when running on Windows (see the new hidden-tile
+  // test below) — skipped here rather than made conditional, since there
+  // would be nothing left to tap.
+  testWidgets(
+    'Autenticación biométrica warns when the device has no biometric support',
+    (tester) async {
+      fakeBiometricService.supported = false;
+      useTallViewport(tester);
+      await tester.pumpWidget(wrap(const SettingsPage()));
+
+      await tester.tap(find.text('Autenticación biométrica'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Este dispositivo no admite autenticación biométrica.'), findsOneWidget);
+      expect(sl<SettingsRepository>().current.biometricEnabled, isFalse);
+    },
+    skip: Platform.isWindows,
+  );
+
+  testWidgets(
+    'enabling biometric unlock asks for the master password, then saves the key',
+    (tester) async {
+      useTallViewport(tester);
+      await tester.pumpWidget(wrap(const SettingsPage()));
+
+      await tester.tap(find.text('Autenticación biométrica'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Confirma tu contraseña maestra'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'master-password');
+      await tester.tap(find.text('Continuar'));
+      await tester.pumpAndSettle();
+
+      expect(sl<SettingsRepository>().current.biometricEnabled, isTrue);
+      expect(fakeVaultKeyStore.stored, isNotNull);
+      expect(find.text('Activada'), findsOneWidget);
+    },
+    skip: Platform.isWindows,
+  );
+
+  testWidgets(
+    'a wrong password aborts enabling biometric unlock',
+    (tester) async {
+      useTallViewport(tester);
+      await tester.pumpWidget(wrap(const SettingsPage()));
+
+      await tester.tap(find.text('Autenticación biométrica'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'not-the-password');
+      await tester.tap(find.text('Continuar'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Contraseña incorrecta.'), findsOneWidget);
+      expect(sl<SettingsRepository>().current.biometricEnabled, isFalse);
+      expect(fakeVaultKeyStore.stored, isNull);
+    },
+    skip: Platform.isWindows,
+  );
+
+  testWidgets(
+    'disabling biometric unlock clears the stored key',
+    (tester) async {
+      await sl<SettingsRepository>().setBiometricEnabled(true);
+      fakeVaultKeyStore.stored = Uint8List(32);
+      useTallViewport(tester);
+      await tester.pumpWidget(wrap(const SettingsPage()));
+
+      await tester.tap(find.text('Autenticación biométrica'));
+      await tester.pumpAndSettle();
+
+      expect(sl<SettingsRepository>().current.biometricEnabled, isFalse);
+      expect(fakeVaultKeyStore.stored, isNull);
+      expect(find.text('Desactivada'), findsOneWidget);
+    },
+    skip: Platform.isWindows,
+  );
+
+  testWidgets('Autenticación biométrica does not appear on Windows', (tester) async {
     useTallViewport(tester);
     await tester.pumpWidget(wrap(const SettingsPage()));
 
-    await tester.tap(find.text('Autenticación biométrica'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Este dispositivo no admite autenticación biométrica.'), findsOneWidget);
-    expect(sl<SettingsRepository>().current.biometricEnabled, isFalse);
-  });
-
-  testWidgets('enabling biometric unlock asks for the master password, then saves the key', (tester) async {
-    useTallViewport(tester);
-    await tester.pumpWidget(wrap(const SettingsPage()));
-
-    await tester.tap(find.text('Autenticación biométrica'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Confirma tu contraseña maestra'), findsOneWidget);
-    await tester.enterText(find.byType(TextField), 'master-password');
-    await tester.tap(find.text('Continuar'));
-    await tester.pumpAndSettle();
-
-    expect(sl<SettingsRepository>().current.biometricEnabled, isTrue);
-    expect(fakeVaultKeyStore.stored, isNotNull);
-    expect(find.text('Activada'), findsOneWidget);
-  });
-
-  testWidgets('a wrong password aborts enabling biometric unlock', (tester) async {
-    useTallViewport(tester);
-    await tester.pumpWidget(wrap(const SettingsPage()));
-
-    await tester.tap(find.text('Autenticación biométrica'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'not-the-password');
-    await tester.tap(find.text('Continuar'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Contraseña incorrecta.'), findsOneWidget);
-    expect(sl<SettingsRepository>().current.biometricEnabled, isFalse);
-    expect(fakeVaultKeyStore.stored, isNull);
-  });
-
-  testWidgets('disabling biometric unlock clears the stored key', (tester) async {
-    await sl<SettingsRepository>().setBiometricEnabled(true);
-    fakeVaultKeyStore.stored = Uint8List(32);
-    useTallViewport(tester);
-    await tester.pumpWidget(wrap(const SettingsPage()));
-
-    await tester.tap(find.text('Autenticación biométrica'));
-    await tester.pumpAndSettle();
-
-    expect(sl<SettingsRepository>().current.biometricEnabled, isFalse);
-    expect(fakeVaultKeyStore.stored, isNull);
-    expect(find.text('Desactivada'), findsOneWidget);
-  });
+    expect(find.text('Autenticación biométrica'), findsNothing);
+  }, skip: !Platform.isWindows);
 
   testWidgets('Etiquetas opens the tags screen', (tester) async {
     useTallViewport(tester);
@@ -377,5 +411,48 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('NexusKeys'), findsWidgets);
+  });
+
+  testWidgets('embedded hides Etiquetas and Papelera, already direct sidebar destinations', (tester) async {
+    useTallViewport(tester);
+    await tester.pumpWidget(wrap(const Scaffold(body: SettingsPage(embedded: true))));
+
+    expect(find.text('Etiquetas'), findsNothing);
+    expect(find.text('Papelera'), findsNothing);
+  });
+
+  testWidgets('embedded: opening a sub-page swaps it in place instead of pushing a route', (tester) async {
+    useTallViewport(tester);
+    await tester.pumpWidget(wrap(const Scaffold(body: SettingsPage(embedded: true))));
+
+    expect(find.text('Ajustes'), findsOneWidget);
+    await tester.tap(find.text('Tema'));
+    await tester.pumpAndSettle();
+
+    // Swapped in place, not pushed - the settings list (and its "Ajustes"
+    // header) is gone, replaced by the sub-page's own embedded header.
+    expect(find.text('Ajustes'), findsNothing);
+    expect(find.text('Tema'), findsOneWidget);
+    expect(find.text('OLED'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ajustes'), findsOneWidget);
+    expect(find.text('Tema'), findsOneWidget);
+  });
+
+  testWidgets('embedded: Bloqueo automático reflects a change back after returning', (tester) async {
+    useTallViewport(tester);
+    await tester.pumpWidget(wrap(const Scaffold(body: SettingsPage(embedded: true))));
+
+    await tester.tap(find.text('Bloqueo automático'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Nunca'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nunca'), findsOneWidget);
   });
 }

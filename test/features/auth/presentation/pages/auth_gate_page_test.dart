@@ -40,6 +40,9 @@ class _FakeVaultKeyStore implements VaultKeyStore {
 
   @override
   Future<void> clear() async {}
+
+  @override
+  bool get hasWarmedUpCipher => false;
 }
 
 /// Hand-written fake instead of a mocking framework — AuthRepository has

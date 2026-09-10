@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -8,7 +9,6 @@ import '../../../../core/security/secure_bytes.dart';
 import '../../domain/entities/auth_result.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../domain/services/biometric_service.dart';
-import '../../domain/services/vault_key_store.dart';
 import '../../../backup/presentation/pages/import_export_page.dart';
 import '../../../settings/domain/repositories/settings_repository.dart';
 import '../../../vault/domain/repositories/vault_repository.dart';
@@ -39,11 +39,10 @@ class AuthGatePage extends StatefulWidget {
   State<AuthGatePage> createState() => _AuthGatePageState();
 }
 
-class _AuthGatePageState extends State<AuthGatePage> {
+class _AuthGatePageState extends State<AuthGatePage> with WidgetsBindingObserver {
   final AuthRepository _authRepository = sl<AuthRepository>();
   final VaultSession _vaultSession = sl<VaultSession>();
   final BiometricService _biometricService = sl<BiometricService>();
-  final VaultKeyStore _vaultKeyStore = sl<VaultKeyStore>();
   final SettingsRepository _settings = sl<SettingsRepository>();
 
   _Screen _screen = _Screen.loading;
@@ -51,23 +50,86 @@ class _AuthGatePageState extends State<AuthGatePage> {
   bool _biometricAvailable = false;
   String? _lockScreenError;
 
+  /// Set the moment the app leaves the foreground, so [didChangeAppLifecycleState]
+  /// can tell on resume how long it was away — that's what "Bloqueo automático"
+  /// actually measures against. Cleared on resume.
+  DateTime? _backgroundedAt;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkVaultStatus();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// "Bloquear al cerrar" and "Bloqueo automático" (Ajustes > SEGURIDAD) were
+  /// both persisted settings with nothing anywhere actually enforcing them —
+  /// this is that enforcement. Only matters while the vault is unlocked;
+  /// there's nothing to protect on the welcome/lock/loading screens.
+  ///
+  /// "Bloquear al cerrar" locks the instant the app leaves the foreground,
+  /// regardless of how briefly - it doesn't wait to see if you come back.
+  /// "Bloqueo automático" is the gentler alternative for when that's off: it
+  /// only locks once you've actually been away for at least that long,
+  /// checked when you return rather than via a background timer (the vault's
+  /// contents aren't on screen while backgrounded either way, so checking on
+  /// resume - before anything is shown again - is enough).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_screen != _Screen.vault) return;
+
+    switch (state) {
+      case AppLifecycleState.resumed:
+        final backgroundedAt = _backgroundedAt;
+        _backgroundedAt = null;
+        if (backgroundedAt == null) return;
+        final autoLockAfter = _settings.current.autoLockAfter;
+        if (autoLockAfter == null) return; // "Nunca"
+        if (DateTime.now().difference(backgroundedAt) >= autoLockAfter) {
+          _lockVault();
+        }
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+        _backgroundedAt ??= DateTime.now();
+        if (_settings.current.lockOnClose) _lockVault();
+      case AppLifecycleState.detached:
+        if (_settings.current.lockOnClose) _vaultSession.lock();
+    }
   }
 
   Future<void> _checkVaultStatus() async {
     final initialized = await _authRepository.isVaultInitialized();
-    final biometricAvailable = initialized &&
-        _settings.current.biometricEnabled &&
-        await _vaultKeyStore.hasStoredKey &&
-        await _biometricService.isDeviceSupported();
     if (!mounted) return;
     setState(() {
       _screen = initialized ? _Screen.lock : _Screen.welcome;
-      _biometricAvailable = biometricAvailable;
+      // Resolved separately, after the lock screen is already on screen —
+      // see _refreshBiometricAvailability's doc comment for why.
+      _biometricAvailable = false;
     });
+    if (initialized) unawaited(_refreshBiometricAvailability());
+  }
+
+  /// Whether to show the fingerprint icon on the lock screen — deliberately
+  /// checked *after* [_checkVaultStatus] has already put the lock screen on
+  /// screen, not as part of it. [BiometricService.isDeviceSupported] calls
+  /// into the platform's biometric APIs, and on at least one real device
+  /// that alone was enough to surface a native biometric prompt before
+  /// NexusKeys' own lock screen had even painted — asking the user to
+  /// authenticate before they had chosen to unlock at all. Running this
+  /// after the fact means the lock screen, not a biometric prompt, is
+  /// always what greets you first.
+  Future<void> _refreshBiometricAvailability() async {
+    final available =
+        _settings.current.biometricEnabled && await _biometricService.isDeviceSupported();
+    if (!mounted || _screen != _Screen.lock) return;
+    setState(() => _biometricAvailable = available);
   }
 
   void _openCreatePasswordPage() {

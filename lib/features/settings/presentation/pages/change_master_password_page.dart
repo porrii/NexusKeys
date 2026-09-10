@@ -18,7 +18,16 @@ import '../../../auth/presentation/pages/create_master_password_page.dart';
 /// time until something tells it otherwise. Skipping the second step would
 /// leave the vault permanently undecryptable the moment this "succeeds".
 class ChangeMasterPasswordPage extends StatefulWidget {
-  const ChangeMasterPasswordPage({super.key});
+  const ChangeMasterPasswordPage({super.key, this.embedded = false, this.onDone});
+
+  /// True when SettingsPage renders this inline in the wide layout instead
+  /// of pushing it as its own route — skips the Scaffold/AppBar and, on
+  /// success, calls [onDone] instead of popping (there's no route to pop).
+  final bool embedded;
+
+  /// Called after a successful password change when [embedded] — the
+  /// non-embedded path shows a SnackBar and pops instead.
+  final VoidCallback? onDone;
 
   @override
   State<ChangeMasterPasswordPage> createState() => _ChangeMasterPasswordPageState();
@@ -72,7 +81,11 @@ class _ChangeMasterPasswordPageState extends State<ChangeMasterPasswordPage> {
         _vaultSession.rekey(vaultKey);
         wipe(vaultKey);
         if (!mounted) return;
-        Navigator.of(context).pop();
+        if (widget.embedded) {
+          widget.onDone?.call();
+        } else {
+          Navigator.of(context).pop();
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Contraseña maestra actualizada')),
         );
@@ -92,46 +105,47 @@ class _ChangeMasterPasswordPageState extends State<ChangeMasterPasswordPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final form = ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        AppPasswordField(
+          controller: _currentController,
+          hintText: 'Contraseña actual',
+          autofocus: true,
+        ),
+        const SizedBox(height: 16),
+        AppPasswordField(controller: _newController, hintText: 'Nueva contraseña'),
+        const SizedBox(height: 16),
+        AppPasswordField(
+          controller: _confirmController,
+          hintText: 'Confirmar nueva contraseña',
+          onSubmitted: (_) => _submit(),
+        ),
+        if (_errorText case final error?) ...[
+          const SizedBox(height: 12),
+          Text(error, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
+        ],
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _isBusy ? null : _submit,
+            child: _isBusy
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Text('Guardar'),
+          ),
+        ),
+      ],
+    );
+
+    if (widget.embedded) return form;
     return Scaffold(
       appBar: AppBar(title: const Text('Cambiar contraseña maestra')),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            AppPasswordField(
-              controller: _currentController,
-              hintText: 'Contraseña actual',
-              autofocus: true,
-            ),
-            const SizedBox(height: 16),
-            AppPasswordField(controller: _newController, hintText: 'Nueva contraseña'),
-            const SizedBox(height: 16),
-            AppPasswordField(
-              controller: _confirmController,
-              hintText: 'Confirmar nueva contraseña',
-              onSubmitted: (_) => _submit(),
-            ),
-            if (_errorText case final error?) ...[
-              const SizedBox(height: 12),
-              Text(error, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
-            ],
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isBusy ? null : _submit,
-                child: _isBusy
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Text('Guardar'),
-              ),
-            ),
-          ],
-        ),
-      ),
+      body: SafeArea(child: form),
     );
   }
 }

@@ -34,6 +34,11 @@ class SecureVaultKeyStore implements VaultKeyStore {
 
   final FlutterSecureStorage _storage;
 
+  bool _hasWarmedUpCipher = false;
+
+  @override
+  bool get hasWarmedUpCipher => _hasWarmedUpCipher;
+
   @override
   Future<bool> get hasStoredKey async {
     try {
@@ -44,8 +49,10 @@ class SecureVaultKeyStore implements VaultKeyStore {
   }
 
   @override
-  Future<void> save(Uint8List vaultKey) =>
-      _storage.write(key: _storageKey, value: base64Encode(vaultKey));
+  Future<void> save(Uint8List vaultKey) async {
+    await _storage.write(key: _storageKey, value: base64Encode(vaultKey));
+    _hasWarmedUpCipher = true;
+  }
 
   /// Null both when nothing has been stored and when the native biometric
   /// prompt was cancelled or failed — [BiometricPromptPage] treats those
@@ -54,6 +61,11 @@ class SecureVaultKeyStore implements VaultKeyStore {
   Future<Uint8List?> read() async {
     try {
       final encoded = await _storage.read(key: _storageKey);
+      // Reaching this line at all means the plugin's own authentication
+      // (if it was going to ask) already succeeded — a thrown
+      // PlatformException below means it didn't, so this is skipped and
+      // the very next read() still gets to try a fresh native prompt.
+      _hasWarmedUpCipher = true;
       if (encoded == null) return null;
       return base64Decode(encoded);
     } on PlatformException {

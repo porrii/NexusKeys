@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -45,6 +47,15 @@ class SettingsPage extends StatefulWidget {
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
+/// Ajustes' own sub-pages (Bloqueo automático, Tema, ...) — kept as an
+/// internal state on [SettingsPage] rather than a route, so switching to one
+/// while [SettingsPage.embedded] keeps the wide layout's sidebar visible
+/// instead of covering it with a pushed route. "Licencias" isn't here: the
+/// framework's [LicensePage] always builds its own Scaffold/AppBar with no
+/// way back to this list when it isn't reached via a real route push, so it
+/// keeps using [showLicensePage] even when embedded.
+enum _SettingsSubView { autoLock, changePassword, theme, language, importExport }
+
 class _SettingsPageState extends State<SettingsPage> {
   final SettingsRepository _settings = sl<SettingsRepository>();
   final BiometricService _biometricService = sl<BiometricService>();
@@ -53,6 +64,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final VaultSession _vaultSession = sl<VaultSession>();
 
   String? _appVersion;
+  _SettingsSubView? _embeddedSubView;
 
   @override
   void initState() {
@@ -72,6 +84,32 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _push(Widget page) async {
     await Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
     if (mounted) setState(() {});
+  }
+
+  Widget _buildEmbeddedSubView(_SettingsSubView view) {
+    void back() => setState(() => _embeddedSubView = null);
+
+    final (title, page) = switch (view) {
+      _SettingsSubView.autoLock => ('Bloqueo automático', const AutoLockSettingsPage(embedded: true)),
+      _SettingsSubView.changePassword => (
+          'Cambiar contraseña maestra',
+          ChangeMasterPasswordPage(embedded: true, onDone: back),
+        ),
+      _SettingsSubView.theme => ('Tema', const ThemeSettingsPage(embedded: true)),
+      _SettingsSubView.language => ('Idioma', const LanguageSettingsPage(embedded: true)),
+      _SettingsSubView.importExport => (
+          'Importar / Exportar',
+          ImportExportPage(embedded: true, onImportComplete: widget.onLock),
+        ),
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        EmbeddedSectionHeader(title, onBack: back),
+        Expanded(child: page),
+      ],
+    );
   }
 
   /// Disabling just clears the stored key. Enabling needs the master
@@ -201,6 +239,10 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     final settings = _settings.current;
 
+    if (widget.embedded && _embeddedSubView != null) {
+      return SafeArea(child: _buildEmbeddedSubView(_embeddedSubView!));
+    }
+
     final body = SafeArea(
       top: !widget.embedded,
       child: ListView(
@@ -211,17 +253,24 @@ class _SettingsPageState extends State<SettingsPage> {
           _SettingsTile(
             title: 'Bloqueo automático',
             value: formatAutoLockDuration(settings.autoLockAfter),
-            onTap: () => _push(const AutoLockSettingsPage()),
+            onTap: () => widget.embedded
+                ? setState(() => _embeddedSubView = _SettingsSubView.autoLock)
+                : _push(const AutoLockSettingsPage()),
           ),
           _SettingsTile(
             title: 'Cambiar contraseña maestra',
-            onTap: () => _push(const ChangeMasterPasswordPage()),
+            onTap: () => widget.embedded
+                ? setState(() => _embeddedSubView = _SettingsSubView.changePassword)
+                : _push(const ChangeMasterPasswordPage()),
           ),
-          _SettingsTile(
-            title: 'Autenticación biométrica',
-            value: settings.biometricEnabled ? 'Activada' : 'Desactivada',
-            onTap: _toggleBiometric,
-          ),
+          // Windows has no biometric hardware/API this app can use — there's
+          // nothing to toggle there.
+          if (!Platform.isWindows)
+            _SettingsTile(
+              title: 'Autenticación biométrica',
+              value: settings.biometricEnabled ? 'Activada' : 'Desactivada',
+              onTap: _toggleBiometric,
+            ),
           _SettingsSwitchTile(
             title: 'Bloquear al cerrar',
             value: settings.lockOnClose,
@@ -234,26 +283,36 @@ class _SettingsPageState extends State<SettingsPage> {
           _SettingsTile(
             title: 'Tema',
             value: _themeLabels[settings.themeMode],
-            onTap: () => _push(const ThemeSettingsPage()),
+            onTap: () => widget.embedded
+                ? setState(() => _embeddedSubView = _SettingsSubView.theme)
+                : _push(const ThemeSettingsPage()),
           ),
           _SettingsTile(
             title: 'Idioma',
             value: 'Español',
-            onTap: () => _push(const LanguageSettingsPage()),
+            onTap: () => widget.embedded
+                ? setState(() => _embeddedSubView = _SettingsSubView.language)
+                : _push(const LanguageSettingsPage()),
           ),
-          _SettingsTile(title: 'Etiquetas', onTap: () => _push(const TagsPage())),
-          _SettingsTile(title: 'Papelera', onTap: () => _push(const TrashPage())),
+          // Already direct sidebar destinations in the wide layout — listing
+          // them here too would just be a redundant second way in.
+          if (!widget.embedded) ...[
+            _SettingsTile(title: 'Etiquetas', onTap: () => _push(const TagsPage())),
+            _SettingsTile(title: 'Papelera', onTap: () => _push(const TrashPage())),
+          ],
           const _SectionHeader('DATOS'),
           _SettingsTile(
             title: 'Importar / Exportar',
-            onTap: () => _push(
-              ImportExportPage(
-                onImportComplete: () {
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                  widget.onLock?.call();
-                },
-              ),
-            ),
+            onTap: () => widget.embedded
+                ? setState(() => _embeddedSubView = _SettingsSubView.importExport)
+                : _push(
+                    ImportExportPage(
+                      onImportComplete: () {
+                        Navigator.of(context).popUntil((route) => route.isFirst);
+                        widget.onLock?.call();
+                      },
+                    ),
+                  ),
           ),
           _SettingsTile(
             title: 'Eliminar bóveda permanentemente',

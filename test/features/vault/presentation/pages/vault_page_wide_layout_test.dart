@@ -48,6 +48,9 @@ class _StubVaultKeyStore implements VaultKeyStore {
 
   @override
   Future<void> clear() async {}
+
+  @override
+  bool get hasWarmedUpCipher => false;
 }
 
 class _StubAuthRepository implements AuthRepository {
@@ -269,8 +272,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('SEGURIDAD'), findsOneWidget);
-    // Sidebar-only footer text — SettingsPage's own body also has tiles
-    // titled "Bóveda"/"Papelera", so those aren't unique enough here.
+    // Sidebar-only footer text.
     expect(find.text('Bóveda bloqueada'), findsOneWidget);
   });
 

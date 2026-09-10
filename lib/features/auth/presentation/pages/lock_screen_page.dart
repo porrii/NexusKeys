@@ -101,24 +101,28 @@ class _LockScreenPageState extends State<LockScreenPage> {
                       : const Text('Desbloquear'),
                 ),
               ),
-              const SizedBox(height: 28),
-              IconButton(
-                iconSize: 36,
-                onPressed: widget.biometricAvailable && !widget.isUnlocking
-                    ? widget.onBiometricUnlock
-                    : null,
-                icon: const Icon(Icons.fingerprint),
-              ),
-              const SizedBox(height: 8),
-              OutlinedButton(
-                onPressed: widget.onOtherOptions,
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  minimumSize: const Size(0, 44),
-                  textStyle: AppTextStyles.body,
+              // Hidden entirely rather than just disabled when there's no
+              // biometric unlock configured — there's nothing to fall back
+              // to yet, so a dimmed fingerprint icon and an "Otras opciones"
+              // that does nothing would just be visual noise.
+              if (widget.biometricAvailable) ...[
+                const SizedBox(height: 28),
+                IconButton(
+                  iconSize: 36,
+                  onPressed: widget.isUnlocking ? null : widget.onBiometricUnlock,
+                  icon: const Icon(Icons.fingerprint),
                 ),
-                child: const Text('Otras opciones'),
-              ),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: widget.onOtherOptions,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    minimumSize: const Size(0, 44),
+                    textStyle: AppTextStyles.body,
+                  ),
+                  child: const Text('Otras opciones'),
+                ),
+              ],
               const Spacer(flex: 3),
             ],
           ),

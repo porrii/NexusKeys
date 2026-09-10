@@ -47,6 +47,9 @@ class _StubVaultKeyStore implements VaultKeyStore {
 
   @override
   Future<void> clear() async {}
+
+  @override
+  bool get hasWarmedUpCipher => false;
 }
 
 class _StubAuthRepository implements AuthRepository {

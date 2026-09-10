@@ -44,15 +44,17 @@ void main() {
     expect(submitted, 'correct-horse-battery-staple');
   });
 
-  testWidgets('biometric button is disabled when unavailable', (tester) async {
+  testWidgets('the fingerprint icon and Otras opciones are hidden entirely when unavailable', (tester) async {
+    await tester.pumpWidget(wrap(const LockScreenPage(biometricAvailable: false)));
+
+    expect(find.byIcon(Icons.fingerprint), findsNothing);
+    expect(find.text('Otras opciones'), findsNothing);
+  });
+
+  testWidgets('the fingerprint icon is disabled (but still visible) while unlocking', (tester) async {
     var tapped = false;
     await tester.pumpWidget(
-      wrap(
-        LockScreenPage(
-          biometricAvailable: false,
-          onBiometricUnlock: () => tapped = true,
-        ),
-      ),
+      wrap(LockScreenPage(isUnlocking: true, onBiometricUnlock: () => tapped = true)),
     );
 
     final button = tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.fingerprint));

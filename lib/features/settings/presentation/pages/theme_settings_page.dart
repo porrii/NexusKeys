@@ -7,7 +7,12 @@ import '../../domain/repositories/settings_repository.dart';
 
 /// Reproduces img/12_theme.png.
 class ThemeSettingsPage extends StatefulWidget {
-  const ThemeSettingsPage({super.key});
+  const ThemeSettingsPage({super.key, this.embedded = false});
+
+  /// True when SettingsPage renders this inline in the wide layout instead
+  /// of pushing it as its own route — skips the Scaffold/AppBar, since the
+  /// parent already supplies a header (with a back arrow) around it.
+  final bool embedded;
 
   @override
   State<ThemeSettingsPage> createState() => _ThemeSettingsPageState();
@@ -27,27 +32,28 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
   Widget build(BuildContext context) {
     final current = _settings.current.themeMode;
 
+    final list = ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        for (final option in _options) ...[
+          _ThemeOptionTile(
+            label: option.label,
+            icon: option.icon,
+            selected: current == option.mode,
+            onTap: () async {
+              await _settings.setThemeMode(option.mode);
+              if (mounted) setState(() {});
+            },
+          ),
+          const SizedBox(height: 12),
+        ],
+      ],
+    );
+
+    if (widget.embedded) return list;
     return Scaffold(
       appBar: AppBar(title: const Text('Tema')),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            for (final option in _options) ...[
-              _ThemeOptionTile(
-                label: option.label,
-                icon: option.icon,
-                selected: current == option.mode,
-                onTap: () async {
-                  await _settings.setThemeMode(option.mode);
-                  if (mounted) setState(() {});
-                },
-              ),
-              const SizedBox(height: 12),
-            ],
-          ],
-        ),
-      ),
+      body: SafeArea(child: list),
     );
   }
 }

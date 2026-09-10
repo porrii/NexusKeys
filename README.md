@@ -1,73 +1,102 @@
 # NexusKeys
 
-A private, fully offline password manager for Android and Windows. No account,
-no server, no telemetry — everything is derived and stored locally, encrypted
-at rest.
+Un gestor de contraseñas privado y totalmente sin conexión para Android y
+Windows. Sin cuenta, sin servidor, sin telemetría: todo se deriva y se guarda
+en local, cifrado en reposo.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Windows-informational)](#)
+[![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-blue.svg)](LICENSE)
+[![Plataforma](https://img.shields.io/badge/plataforma-Android%20%7C%20Windows-informational)](#)
 
-## Features
+## Descargar
 
-- **Master password unlock**, with an optional OS-Keystore-backed biometric
-  unlock (fingerprint / face) for faster access.
-- **Full vault CRUD** for logins, bank cards, secure notes, identities and
-  Wi-Fi credentials, each with its own relevant fields.
-- **Built-in password generator** with configurable length and character sets.
-- **Tags & favorites** for organizing and quickly filtering the vault, plus a
-  live search across titles, usernames and tags.
-- **Soft-delete trash** — deleted items can be restored before they're gone
-  for good.
-- **Encrypted export / import** to a single portable backup file.
-- **Adaptive UI** — a compact layout on phones, and a persistent
-  sidebar + list + detail layout on tablets and Windows.
-- **Dark theme**, matched pixel-for-pixel to the app's design mockups.
+Coge la última versión desde la página de [Releases](https://github.com/porrii/NexusKeys/releases):
 
-## Security architecture
+- **Android** — `NexusKeys-<versión>.apk`. Instalación manual (sideload);
+  tendrás que permitir instalar desde tu navegador o gestor de archivos, ya
+  que no está en Play Store.
+- **Windows (instalador)** — `NexusKeys-Setup-<versión>.exe`. Instala solo
+  para tu usuario o para toda la máquina, eliges la ubicación, y deja un
+  desinstalador normal. La base de datos de la bóveda se guarda en
+  `%APPDATA%\NexusKeys\` independientemente de dónde se instale la app.
+- **Windows (portable)** — `NexusKeys-<versión>-portable-windows-x64.zip`.
+  Descomprime donde quieras y ejecuta `nexuskeys.exe`; no se instala nada.
 
-NexusKeys is built around three well-established primitives, chosen
-specifically for a local password manager rather than a general-purpose app:
+Consulta [CHANGELOG.md](CHANGELOG.md) para ver qué cambió en cada versión.
 
-| Layer | Primitive | Purpose |
+## Características
+
+- **Desbloqueo con contraseña maestra**, con desbloqueo biométrico opcional
+  (huella / cara) respaldado por el Keystore del sistema para un acceso más
+  rápido.
+- **CRUD completo de la bóveda** para inicios de sesión, tarjetas bancarias,
+  notas seguras, identidades y credenciales Wi-Fi, cada uno con sus campos.
+- **Generador de contraseñas** integrado, con longitud y conjuntos de
+  caracteres configurables.
+- **Etiquetas y favoritos** para organizar y filtrar la bóveda rápidamente,
+  más una búsqueda en vivo por título, usuario y etiquetas.
+- **Papelera con borrado suave**: los elementos eliminados se pueden
+  restaurar antes de que desaparezcan del todo.
+- **Exportación / importación cifrada** a un único archivo de copia de
+  seguridad.
+- **Bloqueo automático**: bloquea al salir de primer plano, o tras un tiempo
+  de inactividad configurable, comprobado al volver.
+- **Interfaz adaptable**: diseño compacto en móvil y un diseño persistente de
+  barra lateral + lista + detalle en tablets y Windows.
+- **Temas**: claro, oscuro, negro OLED o seguir el del sistema.
+
+## Arquitectura de seguridad
+
+NexusKeys se apoya en tres primitivas bien establecidas, elegidas
+específicamente para un gestor de contraseñas local y no para una app de
+propósito general:
+
+| Capa | Primitiva | Propósito |
 |---|---|---|
-| Key derivation | **Argon2id** (64 MiB, 3 iterations, 4 lanes) | Turns the master password into the vault's encryption key. Cost parameters are stored alongside the vault, so they can be upgraded later without breaking existing vaults. |
-| Data at rest | **SQLCipher** (AES-256) | The entire vault database is an encrypted SQLite file — nothing is ever written to disk in plaintext. |
-| Field-level secrets | **AES-256-GCM** | Used for authenticated encryption of exported backups and Keystore-protected material. |
-| Biometric unlock | **Android Keystore** | The stored vault key is gated by `BiometricPrompt` at the OS/hardware level — unlocking it is a Keystore operation, not an app-level check that can be bypassed. |
+| Derivación de clave | **Argon2id** (64 MiB, 3 iteraciones, 4 carriles) | Convierte la contraseña maestra en la clave de cifrado de la bóveda. Los parámetros de coste se guardan junto a la bóveda, así que se pueden subir más adelante sin romper las bóvedas existentes. |
+| Datos en reposo | **SQLCipher** (AES-256) | Toda la base de datos de la bóveda es un archivo SQLite cifrado: nunca se escribe nada en disco en texto plano. |
+| Secretos a nivel de campo | **AES-256-GCM** | Cifrado autenticado de las copias de seguridad exportadas y del material protegido por el Keystore. |
+| Desbloqueo biométrico | **Android Keystore + `local_auth`** | La clave de la bóveda vive en una entrada del Keystore que exige autenticación biométrica para descifrarse: una barrera a nivel de hardware, no una comprobación de la app. Además, la app exige un `BiometricPrompt` nuevo en *cada* intento de desbloqueo (la capa del Keystore por sí sola solo pregunta una vez por proceso y luego reutiliza el cifrado ya desbloqueado). No disponible en Windows. |
 
-No plaintext secret — master password, derived key, or vault contents — is
-ever written to disk or sent anywhere. NexusKeys has no network permission
-requirement beyond opening a URL the user explicitly taps, and ships with
-zero analytics, crash reporting, or telemetry dependencies.
+Ningún secreto en texto plano —contraseña maestra, clave derivada o contenido
+de la bóveda— se escribe nunca en disco ni se envía a ningún sitio. NexusKeys
+no necesita permiso de red más allá de abrir una URL que el usuario pulse
+explícitamente, y no incluye ninguna dependencia de analítica, informes de
+fallos ni telemetría.
 
-This project has not undergone an independent third-party security audit.
-Treat it as any other unaudited open-source software.
+Este proyecto no ha pasado una auditoría de seguridad independiente de
+terceros. Trátalo como cualquier otro software de código abierto sin auditar.
 
-## Tech stack
+## Tecnologías
 
-- [Flutter](https://flutter.dev) / Dart, organized as Clean Architecture
-  (`domain` / `data` / `presentation`) per feature.
-- [`get_it`](https://pub.dev/packages/get_it) for dependency injection,
-  [`flutter_riverpod`](https://pub.dev/packages/flutter_riverpod) for state.
-- [`sqlite3`](https://pub.dev/packages/sqlite3) with its SQLCipher build hook
-  for the encrypted local database.
+- [Flutter](https://flutter.dev) / Dart, organizado como Clean Architecture
+  (`domain` / `data` / `presentation`) por cada feature.
+- [`get_it`](https://pub.dev/packages/get_it) para inyección de dependencias,
+  [`flutter_riverpod`](https://pub.dev/packages/flutter_riverpod) para el
+  estado.
+- [`sqlite3`](https://pub.dev/packages/sqlite3) con su build hook de SQLCipher
+  para la base de datos local cifrada.
 - [`cryptography`](https://pub.dev/packages/cryptography) /
-  [`cryptography_flutter`](https://pub.dev/packages/cryptography_flutter) for
-  Argon2id and AES-256-GCM.
-- [`local_auth`](https://pub.dev/packages/local_auth) and
+  [`cryptography_flutter`](https://pub.dev/packages/cryptography_flutter) para
+  Argon2id y AES-256-GCM.
+- [`local_auth`](https://pub.dev/packages/local_auth) y
   [`flutter_secure_storage`](https://pub.dev/packages/flutter_secure_storage)
-  for Keystore-backed biometric unlock.
+  para el desbloqueo biométrico respaldado por el Keystore.
 
-## Getting started
+## Primeros pasos
 
 ```bash
 flutter pub get
 flutter run
 ```
 
-The encrypted SQLite build is fetched automatically via Dart's build hooks
-(see the `hooks:` section in `pubspec.yaml`) — no separate native setup is
-required.
+La build cifrada de SQLite se descarga automáticamente mediante los build
+hooks de Dart (ver la sección `hooks:` en `pubspec.yaml`): no hace falta
+ninguna configuración nativa aparte.
+
+Para preparar una máquina de compilación desde cero (JDK + Android SDK para
+Android, Visual Studio Build Tools para Windows), consulta
+[`installation/`](installation/): tiene guías `SETUP.md` por plataforma y
+scripts que lo automatizan.
 
 ### Tests
 
@@ -75,23 +104,39 @@ required.
 flutter test
 ```
 
-## Project structure
+### Generar los artefactos de release
+
+```bash
+# Android
+flutter build apk --release          # -> build/app/outputs/flutter-apk/app-release.apk
+
+# Windows (compila la app y luego empaqueta el instalador)
+flutter build windows --release      # -> build/windows/x64/runner/Release/
+iscc windows/installer/nexuskeys.iss  # -> windows/installer/Output/NexusKeys-Setup-<versión>.exe
+```
+
+El zip portable de Windows es simplemente el contenido de
+`build/windows/x64/runner/Release/` comprimido tal cual. Antes de generar una
+release, sube la versión tanto en `pubspec.yaml` como en
+`windows/installer/nexuskeys.iss`.
+
+## Estructura del proyecto
 
 ```
 lib/
-  core/            # DI, theming, database, crypto services shared app-wide
+  core/            # DI, temas, base de datos y servicios de cripto comunes
   features/
-    auth/          # Master password, biometric unlock, vault lifecycle
-    vault/         # Vault items: CRUD, search, tags, trash
-    generator/     # Password generator
-    backup/        # Encrypted export / import
-    settings/      # Settings, tags management, about
+    auth/          # Contraseña maestra, desbloqueo biométrico, ciclo de la bóveda
+    vault/         # Elementos de la bóveda: CRUD, búsqueda, etiquetas, papelera
+    generator/     # Generador de contraseñas
+    backup/        # Exportación / importación cifrada
+    settings/      # Ajustes, gestión de etiquetas, acerca de
 ```
 
-Each feature follows the same internal split: `domain` (entities,
-repository interfaces), `data` (repository implementations, local data
-sources) and `presentation` (pages, widgets).
+Cada feature sigue la misma división interna: `domain` (entidades, interfaces
+de repositorio), `data` (implementaciones de repositorio, fuentes de datos
+locales) y `presentation` (páginas, widgets).
 
-## License
+## Licencia
 
-MIT — see [LICENSE](LICENSE).
+MIT — ver [LICENSE](LICENSE).

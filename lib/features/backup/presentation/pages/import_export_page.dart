@@ -16,13 +16,23 @@ import '../../domain/services/backup_service.dart';
 /// needs to drop back to the lock screen (the auth header was just
 /// replaced), the welcome flow needs to unlock straight in.
 class ImportExportPage extends StatefulWidget {
-  const ImportExportPage({super.key, this.onImportComplete, this.showExportSection = true});
+  const ImportExportPage({
+    super.key,
+    this.onImportComplete,
+    this.showExportSection = true,
+    this.embedded = false,
+  });
 
   final VoidCallback? onImportComplete;
 
   /// False from the welcome flow: there's no vault to export yet on a
   /// fresh install, so offering that button there was always a dead end.
   final bool showExportSection;
+
+  /// True when SettingsPage renders this inline in the wide layout instead
+  /// of pushing it as its own route — skips the Scaffold/AppBar, since the
+  /// parent already supplies a header (with a back arrow) around it.
+  final bool embedded;
 
   @override
   State<ImportExportPage> createState() => _ImportExportPageState();
@@ -157,46 +167,47 @@ class _ImportExportPageState extends State<ImportExportPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final content = ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        if (widget.showExportSection) ...[
+          Text('EXPORTAR BÓVEDA', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          Text(
+            'Exporta tu bóveda a un archivo cifrado para guardarlo de forma segura.',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _isBusy ? null : _export,
+              child: const Text('Exportar'),
+            ),
+          ),
+          const SizedBox(height: 32),
+        ],
+        Text('IMPORTAR BÓVEDA', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8),
+        Text(
+          'Importa un archivo .nexus previamente exportado para restaurar tu bóveda.',
+          style: theme.textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _isBusy ? null : _import,
+            child: const Text('Importar'),
+          ),
+        ),
+      ],
+    );
+
+    if (widget.embedded) return content;
     return Scaffold(
       appBar: AppBar(title: const Text('Importar / Exportar')),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            if (widget.showExportSection) ...[
-              Text('EXPORTAR BÓVEDA', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 8),
-              Text(
-                'Exporta tu bóveda a un archivo cifrado para guardarlo de forma segura.',
-                style: theme.textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isBusy ? null : _export,
-                  child: const Text('Exportar'),
-                ),
-              ),
-              const SizedBox(height: 32),
-            ],
-            Text('IMPORTAR BÓVEDA', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 8),
-            Text(
-              'Importa un archivo .nexus previamente exportado para restaurar tu bóveda.',
-              style: theme.textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isBusy ? null : _import,
-                child: const Text('Importar'),
-              ),
-            ),
-          ],
-        ),
-      ),
+      body: SafeArea(child: content),
     );
   }
 }

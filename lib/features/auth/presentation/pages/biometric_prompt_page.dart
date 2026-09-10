@@ -3,15 +3,14 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../../../core/di/service_locator.dart';
+import '../../domain/services/biometric_service.dart';
 import '../../domain/services/vault_key_store.dart';
 
 /// Reproduces img/10_biometric.png. Shown when the user taps the fingerprint
 /// icon on the lock screen — this is NexusKeys' own branded rationale
 /// screen, not the actual capture UI, since Flutter has no direct sensor
 /// access. The real fingerprint/face capture happens in the OS's own
-/// `BiometricPrompt`, shown natively by [VaultKeyStore.read] itself: the
-/// stored key's Keystore entry requires user authentication to decrypt, so
-/// there is nothing else to trigger it from here.
+/// `BiometricPrompt`.
 ///
 /// Pops with the retrieved vault key on success, or `null` on cancel or a
 /// failed/declined attempt. The caller (AuthGatePage) unlocks
@@ -27,6 +26,7 @@ class BiometricPromptPage extends StatefulWidget {
 
 class _BiometricPromptPageState extends State<BiometricPromptPage> {
   final VaultKeyStore _vaultKeyStore = sl<VaultKeyStore>();
+  final BiometricService _biometricService = sl<BiometricService>();
 
   bool _isAuthenticating = false;
 
@@ -39,6 +39,26 @@ class _BiometricPromptPageState extends State<BiometricPromptPage> {
   Future<void> _authenticate() async {
     if (_isAuthenticating) return;
     setState(() => _isAuthenticating = true);
+
+    // [VaultKeyStore.read]'s own Keystore entry requires user authentication
+    // to decrypt — but flutter_secure_storage only actually shows that
+    // native prompt the *first* time this app process touches it; after
+    // that it keeps the already-unlocked cipher in memory and reuses it
+    // silently for the rest of the process. [hasWarmedUpCipher] says which
+    // case this is: false the first time (read() below is about to show
+    // the real prompt itself — asking again first would just double it
+    // up), true every time after (read() would now unlock silently on its
+    // own, so this is the only prompt that will actually ask).
+    if (_vaultKeyStore.hasWarmedUpCipher) {
+      final confirmed = await _biometricService.authenticate(
+        reason: 'Usa tu huella dactilar para continuar',
+      );
+      if (!mounted) return;
+      if (!confirmed) {
+        setState(() => _isAuthenticating = false);
+        return;
+      }
+    }
 
     final Uint8List? vaultKey = await _vaultKeyStore.read();
     if (!mounted) return;

@@ -60,7 +60,23 @@ flutter build windows --release
 ```
 
 El ejecutable y sus DLLs se generan juntos dentro de `build\windows\x64\runner\Release\` — hay que
-distribuir toda esa carpeta, no solo el `.exe`.
+distribuir toda esa carpeta, no solo el `.exe`. Esa carpeta comprimida en un `.zip` es la
+**versión portable** que se publica en Releases.
+
+## Empaquetar el instalador
+
+Para generar el `.exe` de instalación (además de la portable) hace falta
+[Inno Setup 6](https://jrsoftware.org/isinfo.php). Con la app ya compilada (`flutter build windows
+--release`), desde la raíz del repositorio:
+
+```
+iscc windows\installer\nexuskeys.iss
+```
+
+El instalador queda en `windows\installer\Output\NexusKeys-Setup-<versión>.exe`. Antes de una
+release, sube el número de versión tanto en `pubspec.yaml` como en la línea `#define MyAppVersion`
+de `windows\installer\nexuskeys.iss` — tienen que coincidir. El propio `.iss` tiene un comentario
+de cabecera con el resto de detalles.
 
 ## Problema conocido: error de deprecación de coroutines en MSVC
 
