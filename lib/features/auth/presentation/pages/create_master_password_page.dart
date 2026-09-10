@@ -2,16 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/widgets/app_password_field.dart';
 
-/// Master password creation form.
+/// Formulario de creación de la contraseña maestra.
 ///
-/// Not one of the numbered screens in `/img` — there is no reference mockup
-/// for this exact state — so it deliberately reuses the lock screen's visual
-/// language (same logo, spacing, field and button styles) instead of
-/// introducing a new look, per "adapta únicamente lo imprescindible".
+/// No es una de las pantallas numeradas de `/img` — no hay ningún mockup
+/// de referencia para este estado exacto — así que reutiliza a propósito
+/// el lenguaje visual de la pantalla de bloqueo (mismo logo, espaciado,
+/// estilos de campo y botón) en vez de introducir un aspecto nuevo, según
+/// el "adapta únicamente lo imprescindible".
 class CreateMasterPasswordPage extends StatefulWidget {
   const CreateMasterPasswordPage({super.key, this.onCreate});
 
-  /// Called with the chosen password once it passes local validation.
+  /// Se llama con la contraseña elegida una vez pasa la validación local.
   final ValueChanged<String>? onCreate;
 
   static const minLength = 8;

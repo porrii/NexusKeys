@@ -16,9 +16,10 @@ void main() {
 
   Widget wrap(Widget child) => MaterialApp(theme: AppTheme.dark, home: child);
 
-  // The full control list (password card, strength meter, slider, five
-  // toggles, two checkboxes, the button) doesn't fit the default test
-  // surface, so anything below the fold never gets laid out.
+  // La lista completa de controles (tarjeta de contraseña, medidor de
+  // fortaleza, slider, cinco interruptores, dos checkboxes, el botón) no
+  // cabe en la superficie de test por defecto, así que nada por debajo del
+  // pliegue llega a distribuirse.
   void useTallViewport(WidgetTester tester) {
     tester.view.physicalSize = const Size(400, 1600);
     tester.view.devicePixelRatio = 1.0;

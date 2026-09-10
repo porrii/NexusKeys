@@ -12,7 +12,7 @@ class SettingsRepositoryImpl implements SettingsRepository {
 
   static const _themeModeKey = 'settings.themeMode';
 
-  /// Minutes as an int; 0 means "Inmediato" and -1 means "Nunca" (null).
+  /// Minutos como int; 0 significa "Inmediato" y -1 significa "Nunca" (null).
   static const _autoLockMinutesKey = 'settings.autoLockMinutes';
   static const _lockOnCloseKey = 'settings.lockOnClose';
   static const _biometricEnabledKey = 'settings.biometricEnabled';

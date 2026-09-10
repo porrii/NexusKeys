@@ -23,11 +23,12 @@ import 'package:nexuskeys/features/vault/domain/entities/vault_item_type.dart';
 import 'package:nexuskeys/features/vault/domain/repositories/vault_repository.dart';
 import 'package:nexuskeys/features/vault/presentation/pages/vault_page.dart';
 
-// Same stubs as vault_page_test.dart's mobile suite — see its own doc
-// comments for why each exists. Duplicated rather than shared because the
-// two files exercise genuinely different Scaffolds (see
-// kVaultWideBreakpoint) and keeping them independent avoids one file's
-// fixture change silently affecting the other.
+// Los mismos stubs que la suite de móvil de vault_page_test.dart — ver
+// sus propios comentarios para saber por qué existe cada uno. Duplicados
+// en vez de compartidos porque los dos archivos ejercitan Scaffolds
+// genuinamente distintos (ver kVaultWideBreakpoint) y mantenerlos
+// independientes evita que un cambio de fixture de un archivo afecte al
+// otro en silencio.
 class _StubBiometricService implements BiometricService {
   @override
   Future<bool> isDeviceSupported() async => false;
@@ -174,9 +175,9 @@ void main() {
     );
   }
 
-  // Above kVaultWideBreakpoint (700) — this is what actually selects
-  // VaultPage's wide Scaffold (sidebar + list + inline detail) instead of
-  // its mobile one.
+  // Por encima de kVaultWideBreakpoint (700) — esto es lo que de verdad
+  // selecciona el Scaffold ancho de VaultPage (barra lateral + lista +
+  // detalle en línea) en vez del de móvil.
   void useWideViewport(WidgetTester tester) {
     tester.view.physicalSize = const Size(1100, 800);
     tester.view.devicePixelRatio = 1.0;
@@ -211,12 +212,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Selecciona un elemento'), findsNothing);
-    // Once in the list row's subtitle, once in the detail pane's Usuario
-    // field — both stay on screen at the same time on wide layouts.
+    // Una vez en el subtítulo de la fila de la lista, otra en el campo
+    // Usuario del panel de detalle — ambos se quedan en pantalla a la vez
+    // en los layouts anchos.
     expect(find.text('ivan_dev'), findsNWidgets(2));
     expect(find.text('Editar'), findsOneWidget);
     expect(find.text('Eliminar'), findsOneWidget);
-    // Sidebar must still be visible — a pushed route would have covered it.
+    // La barra lateral debe seguir visible — una ruta empujada la habría
+    // tapado.
     expect(find.text('NexusKeys'), findsOneWidget);
   });
 
@@ -245,7 +248,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Ningún elemento tiene etiquetas todavía'), findsOneWidget);
-    // A pushed route (the old behavior) would have covered the sidebar.
+    // Una ruta empujada (el comportamiento antiguo) habría tapado la barra
+    // lateral.
     expect(find.text('Bóveda'), findsOneWidget);
     expect(find.text('Ajustes'), findsOneWidget);
   });
@@ -272,7 +276,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('SEGURIDAD'), findsOneWidget);
-    // Sidebar-only footer text.
+    // Texto de pie que solo está en la barra lateral.
     expect(find.text('Bóveda bloqueada'), findsOneWidget);
   });
 
@@ -286,9 +290,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Selecciona un elemento'), findsNothing);
 
-    // Away and back to a list-based section — the item selected before
-    // leaving must not still be showing, even though it's still in the
-    // (unfiltered) repository the detail pane resolves selections against.
+    // Fuera y de vuelta a una sección basada en lista — el elemento
+    // seleccionado antes de salir no debe seguir mostrándose, aunque siga
+    // en el repositorio (sin filtrar) contra el que el panel de detalle
+    // resuelve las selecciones.
     await tester.tap(find.text('Favoritos'));
     await tester.pumpAndSettle();
     expect(find.text('Selecciona un elemento'), findsOneWidget);

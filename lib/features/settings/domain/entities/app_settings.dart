@@ -1,11 +1,12 @@
 import 'package:equatable/equatable.dart';
 
-/// The three looks offered on img/12_theme.png, plus following the OS.
+/// Los tres aspectos que ofrece img/12_theme.png, más seguir al del SO.
 enum AppThemeMode { light, dark, oled, system }
 
-/// Auto-lock timing options shown on the "Bloqueo automático" picker.
-/// `Duration.zero` means "Inmediato" (lock the instant the app leaves the
-/// foreground); null means "Nunca" (auto-lock disabled).
+/// Opciones de tiempo del bloqueo automático que se muestran en el
+/// selector de "Bloqueo automático". `Duration.zero` significa "Inmediato"
+/// (bloquear en el instante en que la app deja el primer plano); null
+/// significa "Nunca" (bloqueo automático desactivado).
 const List<Duration?> autoLockOptions = [
   Duration.zero,
   Duration(minutes: 1),
@@ -22,7 +23,8 @@ String formatAutoLockDuration(Duration? duration) {
   return '${duration.inHours} horas';
 }
 
-/// A snapshot of every user-configurable app setting.
+/// Una instantánea de todos los ajustes de la app configurables por el
+/// usuario.
 class AppSettings extends Equatable {
   const AppSettings({
     required this.themeMode,
@@ -43,10 +45,11 @@ class AppSettings extends Equatable {
   final bool lockOnClose;
   final bool biometricEnabled;
 
-  /// [autoLockAfter] is itself nullable ("Nunca"), so a plain `Duration?
-  /// autoLockAfter` parameter couldn't tell "leave it as-is" apart from
-  /// "set it to null" — [_unset] is the standard sentinel-object pattern
-  /// for a nullable field in an otherwise ordinary copyWith.
+  /// [autoLockAfter] es a su vez nullable ("Nunca"), así que un parámetro
+  /// `Duration? autoLockAfter` normal no podría distinguir "déjalo como
+  /// está" de "ponlo a null" — [_unset] es el patrón estándar de objeto
+  /// centinela para un campo nullable en un copyWith por lo demás
+  /// corriente.
   AppSettings copyWith({
     AppThemeMode? themeMode,
     Object? autoLockAfter = _unset,

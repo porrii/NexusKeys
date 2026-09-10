@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../security/password_strength.dart';
 
-/// Five discrete pills, as many filled as [PasswordStrength.segments] —
-/// img/06_generator.png's strength meter, distinct from
-/// [PasswordStrengthIndicator]'s continuous bar on the item details screen
-/// because that's what its own mockup shows.
+/// Cinco pastillas discretas, tantas rellenas como
+/// [PasswordStrength.segments] — el medidor de fortaleza de
+/// img/06_generator.png, distinto de la barra continua de
+/// [PasswordStrengthIndicator] en la pantalla de detalles del elemento
+/// porque es lo que muestra su propio mockup.
 class SegmentedStrengthIndicator extends StatelessWidget {
   const SegmentedStrengthIndicator({required this.strength, super.key});
 

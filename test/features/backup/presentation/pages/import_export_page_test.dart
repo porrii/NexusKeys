@@ -9,11 +9,12 @@ import 'package:nexuskeys/features/auth/data/datasources/auth_local_data_source.
 import 'package:nexuskeys/features/backup/domain/services/backup_service.dart';
 import 'package:nexuskeys/features/backup/presentation/pages/import_export_page.dart';
 
-// The actual export/import buttons invoke package:file_selector's native
-// platform channel, which isn't available under flutter test — these tests
-// cover the screen's static content only. BackupService's own logic
-// (round-trip, tamper/wrong-password rejection) is covered in
-// backup_service_test.dart without going through any UI or file picker.
+// Los botones reales de exportar/importar invocan el canal de plataforma
+// nativo de package:file_selector, que no está disponible bajo flutter
+// test — estos tests solo cubren el contenido estático de la pantalla. La
+// lógica propia de BackupService (ida y vuelta, rechazo de
+// manipulación/contraseña incorrecta) se cubre en backup_service_test.dart
+// sin pasar por ninguna UI ni selector de archivos.
 void main() {
   setUp(() {
     sl

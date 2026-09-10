@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 
-/// First-launch screen — reproduces img/02_welcome.png. Shown only when no
-/// master password has been configured yet.
+/// Pantalla de primer arranque — reproduce img/02_welcome.png. Se muestra
+/// solo cuando aún no se ha configurado ninguna contraseña maestra.
 class WelcomePage extends StatelessWidget {
   const WelcomePage({
     super.key,

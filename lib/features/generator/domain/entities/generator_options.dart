@@ -1,9 +1,9 @@
 import 'package:equatable/equatable.dart';
 
-/// Everything a generation run needs — matches every control on
-/// img/06_generator.png plus "Pronunciables" from the spec's generator
-/// section, which isn't in that particular screenshot but is one of the
-/// explicitly listed requirements.
+/// Todo lo que necesita una generación — coincide con todos los controles
+/// de img/06_generator.png más "Pronunciables" de la sección del generador
+/// de la especificación, que no sale en esa captura concreta pero es uno
+/// de los requisitos listados explícitamente.
 class GeneratorOptions extends Equatable {
   const GeneratorOptions({
     required this.length,
@@ -16,8 +16,8 @@ class GeneratorOptions extends Equatable {
     required this.pronounceable,
   });
 
-  /// The mockup's own defaults: length 16, every character class on,
-  /// both exclusions off.
+  /// Los valores por defecto del propio mockup: longitud 16, todas las
+  /// clases de caracteres activadas, ambas exclusiones desactivadas.
   factory GeneratorOptions.recommended() => const GeneratorOptions(
         length: 16,
         useUppercase: true,

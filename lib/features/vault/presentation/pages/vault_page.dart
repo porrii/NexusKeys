@@ -16,24 +16,28 @@ import 'item_details_page.dart';
 
 enum _VaultFilter { all, favorites, recent }
 
-/// Below this width, VaultPage keeps its mobile Scaffold (drawer, bottom
-/// nav, filter chips, pushed detail page) exactly as before. At or above
-/// it, img/13_tablet.png and img/14_windows.png's persistent sidebar +
-/// list + inline detail layout takes over instead.
+/// Por debajo de este ancho, VaultPage mantiene su Scaffold de móvil
+/// (drawer, navegación inferior, chips de filtro, página de detalle
+/// empujada) tal cual. A partir de ese ancho, toma el relevo el layout
+/// persistente de barra lateral + lista + detalle en línea de
+/// img/13_tablet.png e img/14_windows.png.
 const double kVaultWideBreakpoint = 700;
 
-/// Reproduces img/03_vault.png, backed by the real encrypted database.
+/// Reproduce img/03_vault.png, respaldado por la base de datos cifrada
+/// real.
 class VaultPage extends StatefulWidget {
   const VaultPage({super.key, this.onLock, this.onVaultDeleted});
 
-  /// The AppBar's lock icon (mobile) and the sidebar's lock control (wide
-  /// layout) both call this directly — no confirmation, matching how a
-  /// physical lock button works elsewhere in the app.
+  /// El icono de candado del AppBar (móvil) y el control de bloqueo de la
+  /// barra lateral (layout ancho) llaman a esto directamente — sin
+  /// confirmación, igual que funciona un botón físico de bloqueo en otras
+  /// partes de la app.
   final VoidCallback? onLock;
 
-  /// Settings' "Eliminar bóveda permanentemente" calls this once the vault
-  /// is actually gone, so AuthGatePage can drop back to the welcome screen
-  /// instead of a lock screen with nothing left to unlock.
+  /// El "Eliminar bóveda permanentemente" de Ajustes llama a esto una vez
+  /// la bóveda ya no está, para que AuthGatePage pueda volver a la
+  /// pantalla de bienvenida en vez de a una pantalla de bloqueo sin nada
+  /// que desbloquear.
   final VoidCallback? onVaultDeleted;
 
   @override
@@ -47,17 +51,18 @@ class _VaultPageState extends State<VaultPage> {
   bool _isSearching = false;
   String _searchQuery = '';
 
-  // Wide-layout only (see kVaultWideBreakpoint) — mobile never touches
-  // these, since it pushes ItemDetailsPage as a route instead of keeping a
-  // selection inline.
+  // Solo layout ancho (ver kVaultWideBreakpoint) — el móvil nunca toca
+  // esto, ya que empuja ItemDetailsPage como una ruta en vez de mantener
+  // una selección en línea.
   VaultSidebarSection _sidebarSection = VaultSidebarSection.vault;
   int? _selectedItemId;
 
-  // Mobile-layout only: Bóveda/Generador/Ajustes each get their own nested
-  // Navigator so pushing within one (item details, an edit form, a
-  // settings sub-page, ...) only covers that tab's content — the outer
-  // Scaffold's bottomNavigationBar, built once around all three, is never
-  // part of any of their route stacks and so never disappears.
+  // Solo layout de móvil: Bóveda/Generador/Ajustes tienen cada uno su
+  // propio Navigator anidado para que empujar dentro de uno (detalle de un
+  // elemento, un formulario de edición, una subpágina de ajustes, ...)
+  // solo tape el contenido de esa pestaña — la bottomNavigationBar del
+  // Scaffold exterior, construida una vez alrededor de las tres, nunca es
+  // parte de ninguna de sus pilas de rutas y por eso nunca desaparece.
   int _bottomNavIndex = 0;
   final _vaultTabNavigatorKey = GlobalKey<NavigatorState>();
   final _generatorTabNavigatorKey = GlobalKey<NavigatorState>();
@@ -66,13 +71,13 @@ class _VaultPageState extends State<VaultPage> {
   List<GlobalKey<NavigatorState>> get _tabNavigatorKeys =>
       [_vaultTabNavigatorKey, _generatorTabNavigatorKey, _settingsTabNavigatorKey];
 
-  /// IndexedStack builds every child eagerly, every time — without this,
-  /// switching to Bóveda would also construct GeneratorPage and
-  /// SettingsPage (and touch every service they resolve via GetIt)
-  /// up front, whether or not the user ever visits those tabs. Once a tab
-  /// has been visited, its slot keeps rendering the real Navigator from
-  /// then on instead of reverting to the placeholder, so its state and
-  /// route stack survive being switched away from.
+  /// IndexedStack construye todos sus hijos de forma anticipada, siempre —
+  /// sin esto, cambiar a Bóveda también construiría GeneratorPage y
+  /// SettingsPage (y tocaría todos los servicios que resuelven vía GetIt)
+  /// de entrada, visite o no el usuario esas pestañas. Una vez visitada una
+  /// pestaña, su hueco sigue renderizando el Navigator real a partir de
+  /// entonces en vez de volver al placeholder, así que su estado y su pila
+  /// de rutas sobreviven a que se cambie de pestaña.
   final Set<int> _visitedTabIndices = {0};
 
   @override
@@ -85,14 +90,15 @@ class _VaultPageState extends State<VaultPage> {
     return switch (_filter) {
       _VaultFilter.all => items,
       _VaultFilter.favorites => items.where((i) => i.isFavorite).toList(),
-      // Already sorted by most-recently-updated by the repository.
+      // El repositorio ya los ordena por actualizado más reciente.
       _VaultFilter.recent => items,
     };
   }
 
-  /// Matches against every field a user is likely to search by — not just
-  /// the title shown in the row — so e.g. searching an email finds the
-  /// account it belongs to even if the title doesn't mention it.
+  /// Casa contra todos los campos por los que es probable que un usuario
+  /// busque — no solo el título que se ve en la fila — para que, p. ej.,
+  /// buscar un email encuentre la cuenta a la que pertenece aunque el
+  /// título no lo mencione.
   List<VaultItem> _applySearch(List<VaultItem> items) {
     final query = _searchQuery.trim().toLowerCase();
     if (query.isEmpty) return items;
@@ -128,11 +134,11 @@ class _VaultPageState extends State<VaultPage> {
     );
   }
 
-  /// [context] determines which Navigator the push (and any further pushes
-  /// — edit, and the delete-undo SnackBar's Scaffold) lands on: the caller
-  /// passes whatever context is a descendant of the Navigator it wants
-  /// covered — Bóveda's own nested one on mobile, the shared outer one on
-  /// the wide layout.
+  /// [context] determina en qué Navigator cae el push (y cualquier push
+  /// posterior — editar, y el Scaffold del SnackBar de deshacer-borrado):
+  /// quien llama pasa el context que sea descendiente del Navigator que
+  /// quiere que se tape — el anidado propio de Bóveda en móvil, el exterior
+  /// compartido en el layout ancho.
   void _openItemDetails(BuildContext context, VaultItem item) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -181,12 +187,13 @@ class _VaultPageState extends State<VaultPage> {
     return null;
   }
 
-  /// Every section switch drops whatever was selected in the previous one —
-  /// otherwise the detail pane could keep showing an item from Bóveda after
-  /// switching to Favoritos, even though nothing in Favoritos was actually
-  /// clicked. Tags/Trash/Settings don't use `_selectedItemId` themselves,
-  /// but clearing it here too means it's already reset if the user comes
-  /// back to Bóveda/Favoritos/Recientes afterward.
+  /// Cada cambio de sección descarta lo que estuviera seleccionado en la
+  /// anterior — si no, el panel de detalle podría seguir mostrando un
+  /// elemento de Bóveda tras cambiar a Favoritos, aunque no se haya
+  /// pulsado nada en Favoritos de verdad. Etiquetas/Papelera/Ajustes no
+  /// usan `_selectedItemId` ellas mismas, pero limpiarlo aquí también
+  /// significa que ya está reseteado si el usuario vuelve luego a
+  /// Bóveda/Favoritos/Recientes.
   void _onSidebarSelect(BuildContext context, VaultSidebarSection section) {
     setState(() {
       _sidebarSection = section;
@@ -211,12 +218,13 @@ class _VaultPageState extends State<VaultPage> {
     );
   }
 
-  /// Sidebar stays visible no matter which section is selected — every
-  /// section renders inline in the content area next to it, rather than
-  /// Etiqueta/Papelera/Ajustes pushing a route that covers the sidebar the
-  /// way they used to. Only navigation *from inside* one of those sections
-  /// (e.g. Ajustes' "Tema" sub-page) still pushes over the sidebar; this
-  /// top-level switch never does.
+  /// La barra lateral se queda visible se elija la sección que se elija —
+  /// cada sección se renderiza en línea en el área de contenido de al
+  /// lado, en vez de que Etiqueta/Papelera/Ajustes empujen una ruta que
+  /// tapa la barra lateral como hacían antes. Solo la navegación *desde
+  /// dentro* de una de esas secciones (p. ej. la subpágina "Tema" de
+  /// Ajustes) sigue empujándose sobre la barra lateral; este cambio de
+  /// primer nivel nunca lo hace.
   Widget _buildWideLayout(BuildContext context) {
     return Scaffold(
       body: Row(
@@ -252,9 +260,9 @@ class _VaultPageState extends State<VaultPage> {
     }
   }
 
-  /// Bóveda/Favoritos/Recientes' shared list+detail split — img/13_tablet.png
-  /// and img/14_windows.png's persistent middle list pane and inline detail
-  /// pane on the right.
+  /// La división compartida lista+detalle de Bóveda/Favoritos/Recientes —
+  /// el panel de lista central persistente y el panel de detalle en línea a
+  /// la derecha de img/13_tablet.png e img/14_windows.png.
   Widget _buildVaultSplitView(BuildContext context) {
     final theme = Theme.of(context);
 
@@ -339,11 +347,12 @@ class _VaultPageState extends State<VaultPage> {
     );
   }
 
-  /// The persistent shell: one bottomNavigationBar shared by all three
-  /// tabs, each with its own nested Navigator (see the GlobalKey fields
-  /// above) so none of their internal pushes ever cover it. IndexedStack
-  /// keeps every tab's widget subtree — and so its Navigator's route
-  /// stack — alive while hidden, rather than tearing it down on switch.
+  /// La envoltura persistente: una bottomNavigationBar compartida por las
+  /// tres pestañas, cada una con su propio Navigator anidado (ver los
+  /// campos GlobalKey de arriba) para que ninguno de sus pushes internos la
+  /// tape nunca. IndexedStack mantiene vivo el subárbol de widgets de cada
+  /// pestaña — y por tanto la pila de rutas de su Navigator — mientras está
+  /// oculta, en vez de destruirlo al cambiar.
   Widget _buildMobileScaffold(BuildContext context) {
     Widget tabSlot(int index, GlobalKey<NavigatorState> key, WidgetBuilder rootBuilder) {
       if (!_visitedTabIndices.contains(index)) return const SizedBox.shrink();
@@ -363,8 +372,9 @@ class _VaultPageState extends State<VaultPage> {
         currentIndex: _bottomNavIndex,
         onIndexSelected: (index) {
           if (index == _bottomNavIndex) {
-            // Tapping the already-active tab again pops it back to its
-            // own root, mirroring how most bottom-nav apps behave.
+            // Pulsar otra vez la pestaña ya activa la devuelve a su propia
+            // raíz, como se comportan la mayoría de apps con navegación
+            // inferior.
             _tabNavigatorKeys[index].currentState?.popUntil((route) => route.isFirst);
           } else {
             setState(() {

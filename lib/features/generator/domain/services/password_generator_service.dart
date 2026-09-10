@@ -1,14 +1,16 @@
 import '../../../../core/security/crypto_service.dart';
 import '../entities/generator_options.dart';
 
-/// Turns [GeneratorOptions] into an actual password, using [CryptoService]'s
-/// CSPRNG for every random choice — the same randomness source the rest of
-/// the app's security relies on, rather than a second, bespoke one.
+/// Convierte [GeneratorOptions] en una contraseña real, usando el CSPRNG
+/// de [CryptoService] para cada elección aleatoria — la misma fuente de
+/// aleatoriedad de la que depende el resto de la seguridad de la app, en
+/// vez de una segunda a medida.
 ///
-/// A single concrete class rather than interface+impl: there's exactly one
-/// sensible algorithm here (no alternate data source to swap in the way
-/// [VaultRepository] has SQLCipher vs. a fake), so the extra layer would
-/// only add indirection without adding testability.
+/// Una única clase concreta en vez de interfaz+implementación: aquí hay
+/// exactamente un algoritmo sensato (ninguna fuente de datos alternativa
+/// que intercambiar como [VaultRepository] tiene SQLCipher frente a un
+/// fake), así que la capa extra solo añadiría indirección sin añadir
+/// testabilidad.
 class PasswordGeneratorService {
   PasswordGeneratorService({required CryptoService cryptoService}) : _crypto = cryptoService;
 
@@ -19,16 +21,17 @@ class PasswordGeneratorService {
   static const _digits = '0123456789';
   static const _symbols = '!@#\$%^&*()-_=+?';
 
-  /// Characters that are easy to confuse with each other in most fonts.
+  /// Caracteres fáciles de confundir entre sí en la mayoría de fuentes.
   static const _ambiguous = 'Il1O0|';
 
   static const _consonants = 'bcdfghjklmnpqrstvwxyz';
   static const _vowels = 'aeiou';
 
-  /// The character set [generate] would draw from for these options —
-  /// exposed so the UI can show real entropy (it knows the exact set used,
-  /// unlike [estimateEntropyBits] which has to infer one from arbitrary
-  /// text) and so it can warn before generating with an empty set.
+  /// El conjunto de caracteres del que tiraría [generate] para estas
+  /// opciones — expuesto para que la UI pueda mostrar entropía real
+  /// (conoce el conjunto exacto usado, a diferencia de
+  /// [estimateEntropyBits] que tiene que inferir uno de texto arbitrario)
+  /// y para que pueda avisar antes de generar con un conjunto vacío.
   String characterSetFor(GeneratorOptions options) {
     var charset = '';
     if (options.useLowercase) charset += _lower;
@@ -50,7 +53,7 @@ class PasswordGeneratorService {
     final charset = characterSetFor(options);
     if (charset.isEmpty) return '';
 
-    // Can't have more unique characters than the charset provides.
+    // No puede haber más caracteres únicos de los que da el charset.
     final targetLength =
         options.excludeRepeated ? (options.length < charset.length ? options.length : charset.length) : options.length;
 
@@ -83,10 +86,11 @@ class PasswordGeneratorService {
     return result;
   }
 
-  /// A uniform random index in `[0, max)`, drawn via rejection sampling so
-  /// no index is more likely than any other — `_crypto.randomBytes(1)[0] %
-  /// max` alone would bias low indices whenever 256 isn't a multiple of
-  /// `max`, which is most of the time.
+  /// Un índice aleatorio uniforme en `[0, max)`, obtenido por muestreo con
+  /// rechazo para que ningún índice sea más probable que otro —
+  /// `_crypto.randomBytes(1)[0] % max` por sí solo sesgaría hacia los
+  /// índices bajos siempre que 256 no sea múltiplo de `max`, que es casi
+  /// siempre.
   int _randomIndex(int max) {
     final limit = 256 - (256 % max);
     while (true) {

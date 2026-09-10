@@ -5,14 +5,16 @@ import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/app_settings.dart';
 import '../../domain/repositories/settings_repository.dart';
 
-/// "Bloqueo automático" picker from img/08_settings.png — no mockup of its
-/// own, styled like [ThemeSettingsPage]'s option list for consistency.
+/// Selector de "Bloqueo automático" de img/08_settings.png — sin mockup
+/// propio, con el estilo de la lista de opciones de [ThemeSettingsPage]
+/// por coherencia.
 class AutoLockSettingsPage extends StatefulWidget {
   const AutoLockSettingsPage({super.key, this.embedded = false});
 
-  /// True when SettingsPage renders this inline in the wide layout instead
-  /// of pushing it as its own route — skips the Scaffold/AppBar, since the
-  /// parent already supplies a header (with a back arrow) around it.
+  /// True cuando SettingsPage la renderiza en línea en el layout ancho en
+  /// vez de empujarla como su propia ruta — se salta el Scaffold/AppBar,
+  /// ya que el padre ya aporta una cabecera (con flecha de volver)
+  /// alrededor.
   final bool embedded;
 
   @override

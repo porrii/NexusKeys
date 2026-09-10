@@ -1,17 +1,19 @@
-/// The `vault_items` table shape and its migration history.
+/// La forma de la tabla `vault_items` y su historial de migraciones.
 ///
-/// One generic table covers every item kind the spec lists (password, card,
-/// note, identity, SSH, WiFi, ...): they all share the same core fields
-/// (title, username, password, url, notes, category, tags, favorite,
-/// color/icon, timestamps). `type` records which kind a row is, and
-/// `extra_data` (JSON) carries whatever fields are specific to that kind
-/// (e.g. card expiry, WiFi security type) — this avoids a rigid table per
-/// item type while still supporting type-specific data. The full
-/// entity/repository layer built on top of this lands in a later module;
-/// this one only owns the encrypted database itself.
+/// Una única tabla genérica cubre todos los tipos de elemento que lista la
+/// especificación (contraseña, tarjeta, nota, identidad, SSH, WiFi, ...):
+/// todos comparten los mismos campos base (título, usuario, contraseña,
+/// url, notas, categoría, etiquetas, favorito, color/icono, marcas de
+/// tiempo). `type` registra de qué tipo es una fila, y `extra_data` (JSON)
+/// lleva los campos específicos de ese tipo (p. ej. la caducidad de una
+/// tarjeta o el tipo de seguridad de una WiFi) — así se evita una tabla
+/// rígida por tipo de elemento sin dejar de admitir datos específicos de
+/// cada tipo. La capa completa de entidades/repositorios que se monta
+/// encima llega en un módulo posterior; esta solo es dueña de la base de
+/// datos cifrada en sí.
 abstract final class VaultSchema {
-  /// Bumped whenever the schema changes; [VaultDatabase] compares this
-  /// against `PRAGMA user_version` to decide whether to migrate.
+  /// Se sube cada vez que cambia el esquema; [VaultDatabase] lo compara con
+  /// `PRAGMA user_version` para decidir si migrar.
   static const int version = 2;
 
   static const String createVaultItemsTable = '''
@@ -43,11 +45,12 @@ abstract final class VaultSchema {
     'CREATE INDEX IF NOT EXISTS idx_vault_items_updated_at ON vault_items(updated_at);',
   ];
 
-  /// Added at version 2 for img/11_categories.png's "Gestionar categorías":
-  /// a managed list of category names, separate from `vault_items.category`
-  /// (still a freeform string an item can carry even if it doesn't match
-  /// any row here) so a category can exist — and show up with a "0" count —
-  /// before any item is filed under it.
+  /// Añadida en la versión 2 para el "Gestionar categorías" de
+  /// img/11_categories.png: una lista gestionada de nombres de categoría,
+  /// separada de `vault_items.category` (que sigue siendo una cadena libre
+  /// que un elemento puede llevar aunque no coincida con ninguna fila de
+  /// aquí) para que una categoría pueda existir — y aparecer con un "0" —
+  /// antes de que haya ningún elemento archivado en ella.
   static const String createCategoriesTable = '''
     CREATE TABLE IF NOT EXISTS categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,11 +59,11 @@ abstract final class VaultSchema {
     );
   ''';
 
-  /// Applies every statement needed to bring a database at [currentVersion]
-  /// up to [version]. Each past version's statements stay behind their own
-  /// `if` so migrating from any older version replays every step in order,
-  /// rather than assuming everyone upgrades from the immediately-previous
-  /// version.
+  /// Aplica todas las sentencias necesarias para llevar una base de datos
+  /// en [currentVersion] hasta [version]. Las sentencias de cada versión
+  /// pasada se quedan tras su propio `if`, así que migrar desde cualquier
+  /// versión más antigua reproduce cada paso en orden, en vez de asumir
+  /// que todo el mundo actualiza desde la versión inmediatamente anterior.
   static List<String> migrationFrom(int currentVersion) {
     final statements = <String>[];
     if (currentVersion < 1) {

@@ -1,18 +1,19 @@
 import 'dart:typed_data';
 
-/// Best-effort memory hygiene helpers.
+/// Utilidades de higiene de memoria de mejor esfuerzo.
 ///
-/// Dart offers no API to lock pages out of swap (`mlock`/`VirtualLock`) or
-/// to guarantee a buffer is never copied by the GC before this runs — doing
-/// that correctly would require a native platform channel. What we *can*
-/// do from pure Dart is overwrite key material the instant we're done with
-/// it, which is what [wipe] does; call it in a `finally` block around every
-/// use of derived keys, nonces, or plaintext secrets.
+/// Dart no ofrece ninguna API para bloquear páginas fuera del swap
+/// (`mlock`/`VirtualLock`) ni para garantizar que el GC no copie un búfer
+/// antes de que esto se ejecute — hacer eso bien requeriría un canal de
+/// plataforma nativo. Lo que *sí* podemos hacer desde Dart puro es
+/// sobrescribir el material de clave en cuanto terminamos con él, que es
+/// lo que hace [wipe]; llámalo en un bloque `finally` alrededor de cada
+/// uso de claves derivadas, nonces o secretos en texto plano.
 void wipe(Uint8List bytes) {
   bytes.fillRange(0, bytes.length, 0);
 }
 
-/// Wipes every buffer, even if [action] throws.
+/// Limpia todos los búferes, aunque [action] lance una excepción.
 Future<T> withWipe<T>(List<Uint8List> buffers, Future<T> Function() action) async {
   try {
     return await action();

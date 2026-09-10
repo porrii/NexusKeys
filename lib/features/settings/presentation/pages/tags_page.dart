@@ -5,26 +5,28 @@ import '../../../../core/widgets/embedded_section_header.dart';
 import '../../../vault/domain/entities/vault_item_type.dart';
 import '../../../vault/domain/repositories/vault_repository.dart';
 
-/// "Etiquetas" — every distinct tag currently used across the vault, with
-/// how many items carry it, and how to rename or remove one. Unlike
-/// categories (the removed "Gestionar categorías" screen), tags have no
-/// separate managed list to create ahead of time — a tag only exists
-/// because at least one item's `VaultItem.tags` carries it, computed
-/// straight from [VaultRepository.currentItems] — so renaming/deleting one
-/// here means editing every item that carries it, not a row in its own
-/// table.
+/// "Etiquetas" — todas las etiquetas distintas usadas ahora mismo en la
+/// bóveda, con cuántos elementos la llevan y cómo renombrar o quitar una.
+/// A diferencia de las categorías (la eliminada pantalla "Gestionar
+/// categorías"), las etiquetas no tienen una lista gestionada aparte que
+/// crear por adelantado — una etiqueta solo existe porque el
+/// `VaultItem.tags` de al menos un elemento la lleva, calculado
+/// directamente de [VaultRepository.currentItems] — así que
+/// renombrar/borrar una aquí significa editar todos los elementos que la
+/// llevan, no una fila en su propia tabla.
 ///
-/// No reference mockup shows this as its own phone-sized screen — it only
-/// appears as a sidebar destination in img/13_tablet.png and
-/// img/14_windows.png. This gives it a real place to live on mobile first,
-/// ahead of the wide-screen layout that will surface it directly in that
-/// sidebar.
+/// Ningún mockup de referencia muestra esto como su propia pantalla de
+/// tamaño móvil — solo aparece como destino de la barra lateral en
+/// img/13_tablet.png y img/14_windows.png. Esto le da primero un sitio
+/// real donde vivir en móvil, por delante del layout de pantalla ancha que
+/// lo mostrará directamente en esa barra lateral.
 class TagsPage extends StatefulWidget {
   const TagsPage({super.key, this.embedded = false});
 
-  /// True on wide layouts (img/13_tablet.png, img/14_windows.png), where
-  /// this renders inline next to the sidebar instead of behind its own
-  /// Scaffold/AppBar reached by pushing a route over everything else.
+  /// True en los layouts anchos (img/13_tablet.png, img/14_windows.png),
+  /// donde esto se renderiza en línea junto a la barra lateral en vez de
+  /// tras su propio Scaffold/AppBar al que se llega empujando una ruta
+  /// sobre todo lo demás.
   final bool embedded;
 
   @override

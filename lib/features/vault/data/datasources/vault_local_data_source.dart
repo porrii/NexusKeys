@@ -2,12 +2,13 @@ import 'package:sqlite3/sqlite3.dart';
 
 import '../../../../core/database/vault_session.dart';
 
-/// Raw SQL against the currently-open encrypted database.
+/// SQL en crudo contra la base de datos cifrada abierta en ese momento.
 ///
-/// Reads [VaultSession.database] fresh on every call rather than caching a
-/// [Database] reference — the session opens a brand new connection on every
-/// unlock, so holding onto an old one would mean silently querying a
-/// closed, disposed connection after a lock/unlock cycle.
+/// Lee [VaultSession.database] fresco en cada llamada en vez de cachear
+/// una referencia a [Database] — la sesión abre una conexión totalmente
+/// nueva en cada desbloqueo, así que aferrarse a una antigua significaría
+/// consultar en silencio una conexión cerrada y desechada tras un ciclo de
+/// bloqueo/desbloqueo.
 class VaultLocalDataSource {
   VaultLocalDataSource({required VaultSession vaultSession}) : _session = vaultSession;
 

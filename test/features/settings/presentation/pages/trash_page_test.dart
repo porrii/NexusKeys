@@ -9,8 +9,8 @@ import 'package:nexuskeys/features/vault/domain/entities/vault_item.dart';
 import 'package:nexuskeys/features/vault/domain/entities/vault_item_type.dart';
 import 'package:nexuskeys/features/vault/domain/repositories/vault_repository.dart';
 
-/// Minimal fake — only the trash-related surface trash_page.dart actually
-/// calls needs to do anything.
+/// Fake mínimo — solo tiene que hacer algo la parte relacionada con la
+/// papelera que trash_page.dart llama de verdad.
 class FakeVaultRepository implements VaultRepository {
   FakeVaultRepository(this.currentTrash);
 

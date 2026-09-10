@@ -5,19 +5,21 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../domain/services/vault_key_store.dart';
 
-/// OS Keystore-backed implementation of [VaultKeyStore], using
-/// flutter_secure_storage's `AndroidOptions.biometric(enforceBiometrics:
-/// true)`: the Keystore AES key protecting this entry is generated with
-/// `setUserAuthenticationRequired(true)`, so reading or writing it makes
-/// the plugin's native side show the real OS `BiometricPrompt` itself
-/// (bound to the key via a `CryptoObject`) and only proceed once that
-/// succeeds — this is enforced by the Keystore/hardware, not by an app-level
-/// check that something with a debugger attached could skip.
+/// Implementación de [VaultKeyStore] respaldada por el Keystore del SO,
+/// usando `AndroidOptions.biometric(enforceBiometrics: true)` de
+/// flutter_secure_storage: la clave AES del Keystore que protege esta
+/// entrada se genera con `setUserAuthenticationRequired(true)`, así que
+/// leerla o escribirla hace que el lado nativo del plugin muestre el
+/// `BiometricPrompt` real del SO (ligado a la clave con un `CryptoObject`)
+/// y solo continúe cuando ese tenga éxito — lo garantiza el
+/// Keystore/hardware, no una comprobación a nivel de app que algo con un
+/// depurador enganchado pudiera saltarse.
 ///
-/// On Windows this falls back to `flutter_secure_storage`'s DPAPI-backed
-/// default storage (no biometric gate — Windows Hello gating isn't exposed
-/// by this plugin), since biometric unlock isn't offered there anyway (see
-/// `BiometricService`, which reports the device as unsupported on Windows).
+/// En Windows esto recae en el almacenamiento por defecto de
+/// `flutter_secure_storage` respaldado por DPAPI (sin barrera biométrica —
+/// este plugin no expone el control de Windows Hello), ya que ahí de todas
+/// formas no se ofrece desbloqueo biométrico (ver `BiometricService`, que
+/// informa del dispositivo como no compatible en Windows).
 class SecureVaultKeyStore implements VaultKeyStore {
   SecureVaultKeyStore({FlutterSecureStorage? storage})
       : _storage = storage ??
@@ -54,17 +56,18 @@ class SecureVaultKeyStore implements VaultKeyStore {
     _hasWarmedUpCipher = true;
   }
 
-  /// Null both when nothing has been stored and when the native biometric
-  /// prompt was cancelled or failed — [BiometricPromptPage] treats those
-  /// the same way (let the user retry or fall back to the password).
+  /// Null tanto cuando no se ha guardado nada como cuando el prompt
+  /// biométrico nativo se canceló o falló — [BiometricPromptPage] trata
+  /// ambos casos igual (deja al usuario reintentar o volver a la
+  /// contraseña).
   @override
   Future<Uint8List?> read() async {
     try {
       final encoded = await _storage.read(key: _storageKey);
-      // Reaching this line at all means the plugin's own authentication
-      // (if it was going to ask) already succeeded — a thrown
-      // PlatformException below means it didn't, so this is skipped and
-      // the very next read() still gets to try a fresh native prompt.
+      // Llegar a esta línea significa que la propia autenticación del
+      // plugin (si iba a preguntar) ya tuvo éxito — una PlatformException
+      // lanzada abajo significa que no, así que esto se salta y el
+      // siguiente read() puede volver a intentar un prompt nativo nuevo.
       _hasWarmedUpCipher = true;
       if (encoded == null) return null;
       return base64Decode(encoded);

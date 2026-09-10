@@ -7,15 +7,16 @@ import '../../features/settings/di/settings_dependencies.dart';
 import '../../features/vault/di/vault_dependencies.dart';
 import '../database/vault_session.dart';
 
-/// Global service locator. Each feature module registers its own
-/// dependencies through a `configureXxxDependencies()` function called from
-/// [setupServiceLocator], keeping features decoupled from one another.
+/// Service locator global. Cada módulo de feature registra sus propias
+/// dependencias mediante una función `configureXxxDependencies()` que se
+/// llama desde [setupServiceLocator], manteniendo las features
+/// desacopladas entre sí.
 final GetIt sl = GetIt.instance;
 
-/// Wires up every feature module's dependencies. Called once from `main()`
-/// before `runApp`.
+/// Conecta las dependencias de todos los módulos de feature. Se llama una
+/// vez desde `main()` antes de `runApp`.
 Future<void> setupServiceLocator() async {
-  // Core infrastructure shared by every feature.
+  // Infraestructura común compartida por todas las features.
   sl.registerLazySingleton(VaultSession.new);
 
   configureAuthDependencies(sl);

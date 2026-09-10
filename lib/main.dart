@@ -6,9 +6,9 @@ import 'features/auth/presentation/pages/auth_gate_page.dart';
 import 'features/settings/domain/entities/app_settings.dart';
 import 'features/settings/domain/repositories/settings_repository.dart';
 
-// cryptography_flutter's native acceleration (Android/iOS/macOS) is
-// registered automatically by Flutter — no manual enable() call needed,
-// just the dependency in pubspec.yaml.
+// La aceleración nativa de cryptography_flutter (Android/iOS/macOS) la
+// registra Flutter automáticamente — no hace falta llamar a enable() a
+// mano, solo tener la dependencia en pubspec.yaml.
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,8 +40,8 @@ class _NexusKeysAppState extends State<NexusKeysApp> with WidgetsBindingObserver
 
   @override
   void didChangePlatformBrightness() {
-    // "Seguir sistema" needs a rebuild when the OS switches light/dark
-    // outside the app's own settings.
+    // "Seguir sistema" necesita reconstruir cuando el SO cambia entre claro
+    // y oscuro al margen de los ajustes de la propia app.
     if (_settings.current.themeMode == AppThemeMode.system) setState(() {});
   }
 
@@ -55,7 +55,7 @@ class _NexusKeysAppState extends State<NexusKeysApp> with WidgetsBindingObserver
       AppThemeMode.light => AppTheme.light,
       AppThemeMode.dark => AppTheme.dark,
       AppThemeMode.oled => AppTheme.oled,
-      AppThemeMode.system => AppTheme.dark, // unreachable, effectiveMode never system
+      AppThemeMode.system => AppTheme.dark, // inalcanzable, effectiveMode nunca es system
     };
   }
 

@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 
-/// Replaces the AppBar title for a page that can render either as its own
-/// full screen (mobile, or pushed over the wide layout's sidebar) or
-/// embedded directly in the wide layout's content area (img/13_tablet.png,
-/// img/14_windows.png) — TagsPage, TrashPage and SettingsPage all reuse
-/// this so the embedded form stays visually consistent across them.
+/// Sustituye al título del AppBar en una página que puede renderizarse
+/// como pantalla completa propia (móvil, o empujada sobre la barra lateral
+/// del layout ancho) o embebida directamente en el área de contenido del
+/// layout ancho (img/13_tablet.png, img/14_windows.png) — TagsPage,
+/// TrashPage y SettingsPage la reutilizan para que la forma embebida se
+/// vea visualmente coherente entre todas.
 ///
-/// [onBack] adds a leading back arrow, for a sub-page embedded a level
-/// deeper (e.g. Ajustes' "Tema") that still needs a way back to its parent
-/// list without a pushed route's default AppBar back button to do it —
-/// omit it for a top-level sidebar destination, which has nothing to go
-/// back *to*.
+/// [onBack] añade una flecha de volver a la izquierda, para una subpágina
+/// embebida un nivel más adentro (p. ej. el "Tema" de Ajustes) que aún
+/// necesita una forma de volver a su lista padre sin el botón de volver
+/// por defecto del AppBar de una ruta empujada — omítelo para un destino
+/// de barra lateral de primer nivel, que no tiene *adónde* volver.
 class EmbeddedSectionHeader extends StatelessWidget {
   const EmbeddedSectionHeader(this.title, {super.key, this.onBack});
 

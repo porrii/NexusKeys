@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// A text field for entering a master password / PIN with a show-hide
-/// toggle. Reused by the lock screen, master password change and any
-/// future form that collects a secret.
+/// Un campo de texto para introducir una contraseña maestra / PIN con un
+/// botón de mostrar/ocultar. Reutilizado por la pantalla de bloqueo, el
+/// cambio de contraseña maestra y cualquier formulario futuro que recoja
+/// un secreto.
 class AppPasswordField extends StatefulWidget {
   const AppPasswordField({
     required this.controller,
@@ -18,8 +19,9 @@ class AppPasswordField extends StatefulWidget {
   final bool autofocus;
   final ValueChanged<String>? onSubmitted;
 
-  /// An extra action shown before the visibility toggle — e.g. the inline
-  /// "generate a password" button in the new/edit item form.
+  /// Una acción extra que se muestra antes del botón de visibilidad — p.
+  /// ej. el botón integrado de "generar una contraseña" en el formulario
+  /// de nuevo/editar elemento.
   final Widget? trailing;
 
   @override

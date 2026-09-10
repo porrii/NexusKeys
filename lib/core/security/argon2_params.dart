@@ -1,9 +1,10 @@
 import 'package:equatable/equatable.dart';
 
-/// Argon2id cost parameters used to derive the master key from the user's
-/// master password. Stored alongside the salt so a vault created with one
-/// cost profile can still be verified/upgraded later even if the
-/// recommended defaults change.
+/// Parámetros de coste de Argon2id usados para derivar la clave maestra de
+/// la contraseña maestra del usuario. Se guardan junto al salt para que
+/// una bóveda creada con un perfil de coste se pueda seguir
+/// verificando/actualizando más adelante aunque cambien los valores por
+/// defecto recomendados.
 class Argon2idParams extends Equatable {
   const Argon2idParams({
     required this.memoryKiB,
@@ -11,10 +12,11 @@ class Argon2idParams extends Equatable {
     required this.parallelism,
   });
 
-  /// OWASP-grade profile for an infrequent, high-value operation (unlocking
-  /// a password manager): 64 MiB of memory, 3 passes, 4 lanes. This is
-  /// deliberately heavier than a typical web-login Argon2id profile because
-  /// it only runs once per unlock, not per request.
+  /// Perfil de nivel OWASP para una operación poco frecuente y de alto
+  /// valor (desbloquear un gestor de contraseñas): 64 MiB de memoria, 3
+  /// pasadas, 4 carriles. Es deliberadamente más pesado que un perfil de
+  /// Argon2id típico de login web porque solo se ejecuta una vez por
+  /// desbloqueo, no por petición.
   factory Argon2idParams.recommended() => const Argon2idParams(
         memoryKiB: 65536,
         iterations: 3,

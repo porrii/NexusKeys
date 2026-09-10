@@ -31,8 +31,8 @@ void main() {
   testWidgets('Oscuro is selected by default, matching AppSettings.defaults()', (tester) async {
     await tester.pumpWidget(wrap(const ThemeSettingsPage()));
 
-    // Exactly one filled check_circle (the selected row); the rest are
-    // outline circles.
+    // Exactamente un check_circle relleno (la fila seleccionada); el resto
+    // son círculos de contorno.
     expect(find.byIcon(Icons.check_circle), findsOneWidget);
   });
 

@@ -6,13 +6,14 @@ import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/vault_item.dart';
 import '../widgets/item_field_card.dart';
 
-/// Read-only view of a vault item — reproduces img/04_item_details.png.
-/// "Editar" hands off to [EditVaultItemPage] (img/05_new_item.png's form,
-/// reused for editing); "Eliminar" is the one place deletion is reachable
-/// from, per the mockup.
+/// Vista de solo lectura de un elemento de la bóveda — reproduce
+/// img/04_item_details.png. "Editar" pasa el testigo a [EditVaultItemPage]
+/// (el formulario de img/05_new_item.png, reutilizado para editar);
+/// "Eliminar" es el único sitio desde el que se puede borrar, según el
+/// mockup.
 ///
-/// Stateful so a favorite toggle or an edit updates what's on screen
-/// immediately, without popping back to the list and re-opening.
+/// Con estado para que marcar/desmarcar favorito o una edición actualicen
+/// lo que hay en pantalla al instante, sin volver a la lista y reabrir.
 class ItemDetailsPage extends StatefulWidget {
   const ItemDetailsPage({
     required this.item,
@@ -24,11 +25,12 @@ class ItemDetailsPage extends StatefulWidget {
 
   final VaultItem item;
 
-  /// Called with the new value; the repository call is the caller's job.
+  /// Se llama con el nuevo valor; la llamada al repositorio es cosa de
+  /// quien llama.
   final ValueChanged<bool>? onToggleFavorite;
 
-  /// Pushes the edit form and resolves with the saved item, or null if the
-  /// user backed out without saving.
+  /// Empuja el formulario de edición y se resuelve con el elemento
+  /// guardado, o null si el usuario salió sin guardar.
   final Future<VaultItem?> Function()? onEdit;
 
   final VoidCallback? onDelete;

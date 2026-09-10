@@ -47,9 +47,9 @@ void main() {
   });
 
   test('a database left at schema version 1 gains the categories table on reopen', () {
-    // Simulates an install that predates the categories table: create just
-    // what version 1 had, and stamp user_version = 1 by hand rather than
-    // going through VaultDatabase.open (which would already create it).
+    // Simula una instalación anterior a la tabla categories: crea solo lo
+    // que tenía la versión 1, y marca user_version = 1 a mano en vez de
+    // pasar por VaultDatabase.open (que ya la crearía).
     final legacy = VaultDatabase.open(dbPath, key);
     legacy.raw.execute(VaultSchema.createVaultItemsTable);
     for (final index in VaultSchema.createIndices) {
@@ -109,11 +109,12 @@ void main() {
     final header = await File(dbPath).openRead(0, 16).first;
     final headerText = String.fromCharCodes(header.take(15));
 
-    // Every unencrypted SQLite file starts with these exact 15 ASCII bytes
-    // (followed by a NUL). A SQLCipher-encrypted file's first page is
-    // itself encrypted, so it must not start with them - this is what
-    // proves encryption is actually happening, rather than just trusting
-    // that the library was configured correctly.
+    // Todo archivo SQLite sin cifrar empieza por estos 15 bytes ASCII
+    // exactos (seguidos de un NUL). La primera página de un archivo
+    // cifrado con SQLCipher está ella misma cifrada, así que no debe
+    // empezar por ellos — esto es lo que demuestra que el cifrado está
+    // ocurriendo de verdad, en vez de solo confiar en que la librería se
+    // configuró bien.
     const plainSqliteMagic = 'SQLite format 3';
     expect(headerText, isNot(plainSqliteMagic));
   });
@@ -147,7 +148,7 @@ void main() {
 
       db.rekey(otherKey);
 
-      // Still usable on the same, now-rekeyed connection without reopening.
+      // Sigue usable en la misma conexión, ya rekeyed, sin reabrir.
       final rows = db.raw.select('SELECT title FROM vault_items;');
       expect(rows.single['title'], 'Netflix');
       db.close();

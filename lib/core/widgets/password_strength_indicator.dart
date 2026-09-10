@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../security/password_strength.dart';
 
-/// A colored progress bar + label, e.g. img/04_item_details.png's green
-/// "Fuerte" indicator under a password. Shared with the Generator module
-/// later so both use the same visual for the same [PasswordStrength].
+/// Una barra de progreso con color + etiqueta, p. ej. el indicador verde
+/// "Fuerte" bajo una contraseña en img/04_item_details.png. Se comparte
+/// luego con el módulo del Generador para que ambos usen el mismo visual
+/// para el mismo [PasswordStrength].
 class PasswordStrengthIndicator extends StatelessWidget {
   const PasswordStrengthIndicator({required this.strength, super.key});
 

@@ -1,15 +1,17 @@
-/// Wraps the platform's own biometric prompt (Android BiometricPrompt,
-/// Windows Hello). NexusKeys never gets direct sensor access — no Flutter
-/// app does — so [authenticate] is only ever "ask the OS to show its native
-/// dialog and tell us whether it succeeded."
+/// Envuelve el prompt biométrico propio de la plataforma (BiometricPrompt
+/// de Android, Windows Hello). NexusKeys nunca tiene acceso directo al
+/// sensor — ninguna app Flutter lo tiene — así que [authenticate] no es
+/// más que "pídele al SO que muestre su diálogo nativo y dinos si tuvo
+/// éxito".
 abstract interface class BiometricService {
-  /// Whether this device has usable biometric hardware with at least one
-  /// credential enrolled. False on emulators/devices with nothing set up.
+  /// Si este dispositivo tiene hardware biométrico usable con al menos una
+  /// credencial registrada. Falso en emuladores/dispositivos sin nada
+  /// configurado.
   Future<bool> isDeviceSupported();
 
-  /// Shows the OS biometric prompt with [reason] as the rationale text.
-  /// Returns whether the user authenticated successfully; false covers both
-  /// "cancelled" and "failed" since neither should be treated differently
-  /// by callers here.
+  /// Muestra el prompt biométrico del SO con [reason] como texto de
+  /// justificación. Devuelve si el usuario se autenticó correctamente;
+  /// false cubre tanto "cancelado" como "fallido", ya que quien llama aquí
+  /// no debe tratarlos de forma distinta.
   Future<bool> authenticate({required String reason});
 }

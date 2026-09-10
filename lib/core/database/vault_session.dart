@@ -5,29 +5,32 @@ import 'package:path_provider/path_provider.dart';
 
 import 'vault_database.dart';
 
-/// Owns the lifetime of the currently-open [VaultDatabase], if any.
+/// Es dueña del ciclo de vida de la [VaultDatabase] abierta en cada
+/// momento, si la hay.
 ///
-/// Registered as a single long-lived instance in the service locator so
-/// every layer agrees on whether the vault is unlocked right now: the auth
-/// flow calls [unlock]/[lock], and once the vault CRUD feature exists it
-/// reads [database] to run queries — nobody re-opens the file independently
-/// or holds their own copy of the key.
+/// Se registra como una única instancia de larga vida en el service
+/// locator para que todas las capas coincidan en si la bóveda está
+/// desbloqueada ahora mismo: el flujo de autenticación llama a
+/// [unlock]/[lock], y una vez existe la feature de CRUD de la bóveda esta
+/// lee [database] para ejecutar consultas — nadie reabre el archivo por su
+/// cuenta ni guarda su propia copia de la clave.
 class VaultSession {
   VaultSession({this.overrideDirectory});
 
   static const _fileName = 'vault.db';
 
-  /// Set only by tests, to redirect the vault database to a temp directory
-  /// instead of the real app-support directory.
+  /// Solo lo fijan los tests, para redirigir la base de datos de la bóveda
+  /// a un directorio temporal en vez del directorio real de soporte de la
+  /// app.
   final Directory? overrideDirectory;
 
   VaultDatabase? _database;
 
   bool get isUnlocked => _database != null;
 
-  /// The active connection. Throws [StateError] if the vault is locked —
-  /// callers only reach this after [unlock] succeeded, so a null check
-  /// here would just hide a real bug in the caller.
+  /// La conexión activa. Lanza [StateError] si la bóveda está bloqueada —
+  /// quien llama aquí solo llega tras un [unlock] correcto, así que una
+  /// comprobación de null aquí solo taparía un bug real en quien llama.
   VaultDatabase get database {
     final db = _database;
     if (db == null) throw StateError('VaultSession.database read while the vault is locked');
@@ -39,9 +42,10 @@ class VaultSession {
     _database = VaultDatabase.open(await _resolvePath(), key);
   }
 
-  /// The vault database's location on disk — for the backup feature, which
-  /// needs to read/replace the raw (already-encrypted) file directly rather
-  /// than through a live connection.
+  /// La ubicación de la base de datos de la bóveda en disco — para la
+  /// feature de copias de seguridad, que necesita leer/reemplazar el
+  /// archivo en crudo (ya cifrado) directamente y no a través de una
+  /// conexión viva.
   Future<File> resolveDatabaseFile() async => File(await _resolvePath());
 
   Future<String> _resolvePath() async {
@@ -49,9 +53,10 @@ class VaultSession {
     return '${dir.path}${Platform.pathSeparator}$_fileName';
   }
 
-  /// Re-encrypts the open database under [newKey] — call this whenever the
-  /// master password changes, right after the new key is derived, so the
-  /// vault stays decryptable with it. Throws [StateError] if locked.
+  /// Vuelve a cifrar la base de datos abierta bajo [newKey] — llámalo
+  /// siempre que cambie la contraseña maestra, justo después de derivar la
+  /// nueva clave, para que la bóveda siga siendo descifrable con ella.
+  /// Lanza [StateError] si está bloqueada.
   void rekey(Uint8List newKey) => database.rekey(newKey);
 
   void lock() {

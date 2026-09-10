@@ -1,61 +1,70 @@
 import '../entities/vault_item.dart';
 
-/// CRUD access to the encrypted vault. Every stream re-emits the full,
-/// current list after any mutating call below — there's a single writer
-/// (this app, one process), so re-querying on write is simpler than real
-/// change-data-capture and is not a meaningful performance concern at
-/// vault-sized row counts.
+/// Acceso CRUD a la bóveda cifrada. Todos los streams vuelven a emitir la
+/// lista completa y actual después de cualquier llamada mutadora de abajo
+/// — hay un único escritor (esta app, un proceso), así que volver a
+/// consultar en cada escritura es más simple que un change-data-capture de
+/// verdad y no es una preocupación de rendimiento relevante con el número
+/// de filas de una bóveda.
 ///
-/// [currentItems]/[currentTrash] and [itemsStream]/[trashStream] are
-/// deliberately separate rather than one Stream that replays its latest
-/// value to new subscribers: hand-rolling that replay with an `async*`
-/// generator racing a broadcast controller is a real footgun (a mutation
-/// that runs synchronously — as every one here does, `package:sqlite3` has
-/// no async I/O — can beat the generator's own first `yield` to the punch
-/// and silently drop events). A plain getter for "right now" plus a plain
-/// change-notification stream sidesteps that entirely, and is exactly what
-/// `StreamBuilder(initialData: ..., stream: ...)` wants anyway.
+/// [currentItems]/[currentTrash] e [itemsStream]/[trashStream] están
+/// deliberadamente separados en vez de un único Stream que reproduce su
+/// último valor a los nuevos suscriptores: montar esa reproducción a mano
+/// con un generador `async*` compitiendo con un controller broadcast es un
+/// footgun de verdad (una mutación que se ejecute de forma síncrona —
+/// como todas las de aquí, `package:sqlite3` no tiene E/S asíncrona —
+/// puede adelantarse al primer `yield` del propio generador y descartar
+/// eventos en silencio). Un getter normal para el "ahora mismo" más un
+/// stream normal de notificación de cambios evita eso por completo, y es
+/// exactamente lo que quiere `StreamBuilder(initialData: ..., stream: ...)`
+/// de todas formas.
 abstract interface class VaultRepository {
-  /// Non-deleted items, most recently updated first, as of the last
-  /// mutation or [reload].
+  /// Elementos no borrados, los actualizados más recientemente primero, a
+  /// fecha de la última mutación o [reload].
   List<VaultItem> get currentItems;
 
-  /// Items currently in the trash (Papelera), most recently deleted first.
+  /// Elementos que están ahora en la papelera (Papelera), los borrados más
+  /// recientemente primero.
   List<VaultItem> get currentTrash;
 
-  /// Emits the full active list after every mutation and [reload].
+  /// Emite la lista activa completa después de cada mutación y [reload].
   Stream<List<VaultItem>> get itemsStream;
 
-  /// Emits the full trash list after every mutation and [reload].
+  /// Emite la lista completa de la papelera después de cada mutación y
+  /// [reload].
   Stream<List<VaultItem>> get trashStream;
 
-  /// Inserts [draft] (its `id` is ignored) and returns it as actually
-  /// persisted — re-read from storage rather than [draft] itself, since
-  /// timestamps are millisecond-truncated on the way into SQLite and
-  /// [draft] may carry sub-millisecond precision that was never stored.
+  /// Inserta [draft] (su `id` se ignora) y lo devuelve tal y como se ha
+  /// guardado de verdad — releído del almacenamiento en vez del propio
+  /// [draft], ya que las marcas de tiempo se truncan a milisegundos al
+  /// entrar en SQLite y [draft] puede llevar precisión de sub-milisegundo
+  /// que nunca se guardó.
   Future<VaultItem> create(VaultItem draft);
 
-  /// Persists every field of [item] except `id`/`createdAt`; `updatedAt` is
-  /// refreshed to now regardless of what [item] carries.
+  /// Guarda todos los campos de [item] excepto `id`/`createdAt`;
+  /// `updatedAt` se refresca a ahora independientemente de lo que lleve
+  /// [item].
   Future<void> update(VaultItem item);
 
   Future<void> setFavorite(int id, bool isFavorite);
 
-  /// Soft-delete: moves the item to the trash without erasing it.
+  /// Borrado suave: mueve el elemento a la papelera sin borrarlo.
   Future<void> moveToTrash(int id);
 
   Future<void> restoreFromTrash(int id);
 
-  /// Erases the row. Only valid for items already in the trash.
+  /// Borra la fila. Solo válido para elementos que ya están en la
+  /// papelera.
   Future<void> deletePermanently(int id);
 
-  /// Re-queries [currentItems]/[currentTrash] and re-broadcasts both
-  /// streams against whatever database connection [VaultSession] currently
-  /// holds. Must be called after every unlock — not just the first one in
-  /// the app's lifetime — or a re-unlock following a lock would keep
-  /// serving stale data from the previous session.
+  /// Vuelve a consultar [currentItems]/[currentTrash] y a re-emitir ambos
+  /// streams contra la conexión de base de datos que [VaultSession] tenga
+  /// en ese momento. Hay que llamarlo después de cada desbloqueo — no solo
+  /// el primero en la vida de la app — o un re-desbloqueo tras un bloqueo
+  /// seguiría sirviendo datos rancios de la sesión anterior.
   Future<void> reload();
 
-  /// Releases the stream controllers. Call when the vault locks.
+  /// Libera los controllers de los streams. Llámalo cuando la bóveda se
+  /// bloquea.
   void dispose();
 }

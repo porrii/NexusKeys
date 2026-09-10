@@ -8,11 +8,12 @@ import 'package:nexuskeys/features/auth/domain/services/biometric_service.dart';
 import 'package:nexuskeys/features/auth/domain/services/vault_key_store.dart';
 import 'package:nexuskeys/features/auth/presentation/pages/biometric_prompt_page.dart';
 
-// BiometricPromptPage's own logic never touches a platform channel directly
-// — the real biometric prompt is shown natively by BiometricService.authenticate
-// and (only the first time per app process, per hasWarmedUpCipher) by
-// VaultKeyStore.read() itself (see SecureVaultKeyStore) — so fakes of both
-// are all these tests need to exercise every branch of the page itself.
+// La lógica propia de BiometricPromptPage nunca toca un canal de
+// plataforma directamente — el prompt biométrico real lo muestra de forma
+// nativa BiometricService.authenticate y (solo la primera vez por proceso
+// de la app, según hasWarmedUpCipher) el propio VaultKeyStore.read() (ver
+// SecureVaultKeyStore) — así que con fakes de ambos basta para que estos
+// tests ejerciten todas las ramas de la propia página.
 class _FakeBiometricService implements BiometricService {
   _FakeBiometricService({this.confirms = true});
 
@@ -48,8 +49,9 @@ class _FakeVaultKeyStore implements VaultKeyStore {
   @override
   Future<Uint8List?> read() async {
     readCalls++;
-    // Mirrors SecureVaultKeyStore: reaching a real return means the
-    // underlying storage authenticated (if it needed to) and is now warm.
+    // Refleja a SecureVaultKeyStore: llegar a un return real significa que
+    // el almacenamiento subyacente se autenticó (si le hacía falta) y ya
+    // está "caliente".
     _warmedUp = true;
     return keyToReturn;
   }
@@ -92,8 +94,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(await resultFuture, expectedKey);
-      // Asking BiometricService too, on top of the storage's own upcoming
-      // prompt, would show two prompts back to back for one unlock.
+      // Pedir también a BiometricService, además del prompt que va a
+      // mostrar el propio almacenamiento, enseñaría dos prompts seguidos
+      // para un solo desbloqueo.
       expect(fakeService.authenticateCalls, 0);
       expect(fakeStore.readCalls, 1);
     },
@@ -111,8 +114,9 @@ void main() {
       await tester.pumpWidget(MaterialApp(theme: AppTheme.dark, home: const BiometricPromptPage()));
       await tester.pumpAndSettle();
 
-      // read() alone wouldn't ask again once warmed up — BiometricService
-      // is what makes this attempt actually require a fresh fingerprint.
+      // read() por sí solo no volvería a preguntar una vez "caliente" —
+      // BiometricService es lo que hace que este intento exija de verdad
+      // una huella nueva.
       expect(fakeService.authenticateCalls, 1);
       expect(fakeStore.readCalls, 1);
     },
@@ -141,8 +145,9 @@ void main() {
       await tester.pumpWidget(MaterialApp(theme: AppTheme.dark, home: const BiometricPromptPage()));
       await tester.pumpAndSettle();
 
-      // First attempt: cold store, so BiometricService is skipped in favor
-      // of read()'s own (fake, here always-null) prompt.
+      // Primer intento: almacenamiento en frío, así que se salta
+      // BiometricService en favor del prompt propio de read() (fake, aquí
+      // siempre null).
       expect(fakeStore.readCalls, 1);
       expect(fakeService.authenticateCalls, 0);
       expect(find.text('Confirmar identidad'), findsOneWidget);
@@ -150,8 +155,8 @@ void main() {
       await tester.tap(find.byIcon(Icons.fingerprint));
       await tester.pumpAndSettle();
 
-      // The store is warm now (read() ran once already), so this retry
-      // goes through BiometricService first.
+      // El almacenamiento ya está "caliente" (read() se ejecutó una vez),
+      // así que este reintento pasa antes por BiometricService.
       expect(fakeStore.readCalls, 2);
       expect(fakeService.authenticateCalls, 1);
     },

@@ -4,11 +4,12 @@ import 'package:equatable/equatable.dart';
 
 import 'vault_item_type.dart';
 
-/// One entry in the vault. Covers every item kind in [VaultItemType] with
-/// the common fields shared by all of them; type-specific fields (a card's
-/// number, an identity's document number, ...) live in [extraData] instead
-/// — see the `keyFor*` constants below for which keys each type actually
-/// reads and writes.
+/// Una entrada de la bóveda. Cubre todos los tipos de elemento de
+/// [VaultItemType] con los campos comunes que todos comparten; los campos
+/// específicos de cada tipo (el número de una tarjeta, el número de
+/// documento de una identidad, ...) viven en [extraData] en su lugar — ver
+/// las constantes `key*` de abajo para saber qué claves lee y escribe de
+/// verdad cada tipo.
 class VaultItem extends Equatable {
   const VaultItem({
     required this.type,
@@ -30,24 +31,24 @@ class VaultItem extends Equatable {
     this.deletedAt,
   });
 
-  /// [VaultItemType.card]'s extra fields.
+  /// Campos extra de [VaultItemType.card].
   static const keyCardholder = 'cardholder';
   static const keyCardNumber = 'card_number';
   static const keyCardExpiry = 'card_expiry';
   static const keyCardCvv = 'card_cvv';
 
-  /// [VaultItemType.identity]'s extra fields.
+  /// Campos extra de [VaultItemType.identity].
   static const keyFullName = 'full_name';
   static const keyDocumentNumber = 'document_number';
   static const keyPhone = 'phone';
 
-  /// [VaultItemType.wifi]'s extra field — the network's SSID. Its password
-  /// reuses the common [password] field instead of an extra one, since
-  /// "the network's password" maps directly onto what that field already
-  /// means for every other type.
+  /// Campo extra de [VaultItemType.wifi] — el SSID de la red. Su contraseña
+  /// reutiliza el campo común [password] en vez de uno extra, ya que "la
+  /// contraseña de la red" encaja directamente con lo que ese campo ya
+  /// significa para el resto de tipos.
   static const keySsid = 'ssid';
 
-  /// Null for an item that hasn't been persisted yet.
+  /// Null para un elemento que todavía no se ha guardado.
   final int? id;
   final VaultItemType type;
   final String title;
@@ -60,14 +61,16 @@ class VaultItem extends Equatable {
   final String? color;
   final String? icon;
 
-  /// Type-specific fields, keyed by the `key*` constants above. Never
-  /// contains an entry for a field the item's own [type] doesn't use.
+  /// Campos específicos de cada tipo, indexados por las constantes `key*`
+  /// de arriba. Nunca contiene una entrada para un campo que el propio
+  /// [type] del elemento no usa.
   final Map<String, String> extraData;
 
-  /// A short second line for a list row — the first field that actually
-  /// means something for this item's type, since username/url are only
-  /// ever populated for [VaultItemType.password]. Empty string (never
-  /// null) when nothing applies, so callers can use it directly.
+  /// Una segunda línea corta para una fila de lista — el primer campo que
+  /// de verdad significa algo para el tipo de este elemento, ya que
+  /// username/url solo se rellenan para [VaultItemType.password]. Cadena
+  /// vacía (nunca null) cuando no aplica nada, para que quien la use pueda
+  /// hacerlo directamente.
   String get subtitleHint {
     return username ??
         url ??
@@ -123,9 +126,10 @@ class VaultItem extends Equatable {
     );
   }
 
-  /// Only depends on core Dart (dart:convert) so the domain layer stays
-  /// free of any specific storage engine — the data layer is responsible
-  /// for turning a `sqlite3` Row into the plain map [fromMap] expects.
+  /// Solo depende del Dart de base (dart:convert) para que la capa de
+  /// dominio se mantenga libre de cualquier motor de almacenamiento
+  /// concreto — la capa de datos es la responsable de convertir una Row de
+  /// `sqlite3` en el mapa plano que espera [fromMap].
   Map<String, Object?> toMap() {
     return {
       'type': type.storageKey,
@@ -141,11 +145,12 @@ class VaultItem extends Equatable {
       'extra_data': extraData.isEmpty ? null : jsonEncode(extraData),
       'is_favorite': isFavorite ? 1 : 0,
       'is_deleted': isDeleted ? 1 : 0,
-      // Normalized to UTC before storage: SQLite's INTEGER column is just
-      // an epoch instant with no timezone of its own, and Dart's DateTime
-      // equality is sensitive to the isUtc flag — reconstructing as local
-      // for what was originally a UTC value (or vice versa) would make an
-      // otherwise-identical VaultItem compare unequal to itself.
+      // Normalizado a UTC antes de guardar: la columna INTEGER de SQLite es
+      // solo un instante epoch sin zona horaria propia, y la igualdad de
+      // DateTime de Dart es sensible al flag isUtc — reconstruir como local
+      // lo que originalmente era un valor UTC (o al revés) haría que un
+      // VaultItem por lo demás idéntico se comparara como distinto de sí
+      // mismo.
       'created_at': createdAt.toUtc().millisecondsSinceEpoch,
       'updated_at': updatedAt.toUtc().millisecondsSinceEpoch,
       'deleted_at': deletedAt?.toUtc().millisecondsSinceEpoch,

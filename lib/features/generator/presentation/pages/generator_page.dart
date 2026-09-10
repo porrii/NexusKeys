@@ -7,14 +7,15 @@ import '../../../../core/widgets/segmented_strength_indicator.dart';
 import '../../domain/entities/generator_options.dart';
 import '../../domain/services/password_generator_service.dart';
 
-/// Reproduces img/06_generator.png. "Pronunciables" is added as a fifth
-/// toggle alongside Mayúsculas/Minúsculas/Números/Símbolos — not in that
-/// particular screenshot, but explicitly required by the spec's Generador
-/// section, and it's the same control style so it doesn't introduce a new
-/// visual language. Entropy bits and an estimated crack time are shown as
-/// a small caption under the strength meter for the same reason: the spec
-/// asks for them explicitly ("Mostrar: Fortaleza, Entropía, Tiempo
-/// estimado"), the mockup just doesn't have room to show every detail.
+/// Reproduce img/06_generator.png. "Pronunciables" se añade como un quinto
+/// interruptor junto a Mayúsculas/Minúsculas/Números/Símbolos — no está en
+/// esa captura concreta, pero lo exige explícitamente la sección Generador
+/// de la especificación, y es el mismo estilo de control, así que no
+/// introduce un lenguaje visual nuevo. Los bits de entropía y un tiempo
+/// estimado de rotura se muestran como un pequeño texto bajo el medidor de
+/// fortaleza por la misma razón: la especificación los pide explícitamente
+/// ("Mostrar: Fortaleza, Entropía, Tiempo estimado"), es solo que el
+/// mockup no tiene sitio para mostrar todos los detalles.
 class GeneratorPage extends StatefulWidget {
   const GeneratorPage({super.key});
 
@@ -59,10 +60,11 @@ class _GeneratorPageState extends State<GeneratorPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // Pronounceable mode alternates consonants/vowels rather than sampling
-    // uniformly from a flat charset, so there's no single "charset size" to
-    // compute exact entropy from — estimateEntropyBits' character-class
-    // inference is the honest approximation there instead.
+    // El modo pronunciable alterna consonantes/vocales en vez de muestrear
+    // uniformemente de un charset plano, así que no hay un único "tamaño
+    // de charset" del que calcular entropía exacta — la inferencia por
+    // clases de carácter de estimateEntropyBits es ahí la aproximación
+    // honesta.
     final entropyBits = _options.pronounceable
         ? estimateEntropyBits(_password)
         : exactEntropyBits(length: _password.length, charsetSize: _generator.characterSetFor(_options).length);

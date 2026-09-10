@@ -4,7 +4,7 @@ import 'package:nexuskeys/core/security/password_strength.dart';
 void main() {
   group('exactEntropyBits', () {
     test('is length * log2(charsetSize)', () {
-      // log2(64) == 6 exactly, so this has an exact expected value.
+      // log2(64) == 6 exacto, así que esto tiene un valor esperado exacto.
       expect(exactEntropyBits(length: 10, charsetSize: 64), closeTo(60, 0.001));
     });
 
@@ -81,8 +81,9 @@ void main() {
     });
 
     test('returns a longer/equal-order phrase for higher entropy', () {
-      // Not asserting exact text (the tiering is an implementation detail)
-      // — just that more entropy never looks like less time to crack.
+      // No se comprueba el texto exacto (los tramos son un detalle de
+      // implementación) — solo que más entropía nunca parezca menos tiempo
+      // para romperse.
       final low = estimateCrackTime(10);
       final high = estimateCrackTime(120);
       expect(low, isNot(high));

@@ -2,16 +2,18 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 
-/// The sections [VaultSidebar] can navigate to. [favorites] and [recent]
-/// filter the item list in place; the rest replace it with that section's
-/// own full-screen content (pushed as a route, same as on mobile) — see
-/// VaultPage's wide-layout handling of [VaultSidebarSection.onTap].
+/// Las secciones a las que puede navegar [VaultSidebar]. [favorites] y
+/// [recent] filtran la lista de elementos en el sitio; el resto la
+/// sustituyen por el contenido embebido de esa sección (junto a la barra
+/// lateral, no una ruta a pantalla completa) — ver el manejo del layout
+/// ancho de VaultPage.
 enum VaultSidebarSection { vault, favorites, recent, tags, trash, settings }
 
-/// The persistent left navigation column shown on wide layouts —
-/// reproduces the sidebar in img/13_tablet.png and img/14_windows.png.
-/// Below the tablet/desktop breakpoint, this doesn't exist at all: mobile
-/// keeps its own drawer/bottom-nav/filter-chip navigation unchanged.
+/// La columna de navegación izquierda persistente que se muestra en los
+/// layouts anchos — reproduce la barra lateral de img/13_tablet.png e
+/// img/14_windows.png. Por debajo del breakpoint de tablet/escritorio,
+/// esto no existe en absoluto: el móvil mantiene sin cambios su propia
+/// navegación de drawer/navegación-inferior/chips-de-filtro.
 class VaultSidebar extends StatelessWidget {
   const VaultSidebar({
     required this.selected,

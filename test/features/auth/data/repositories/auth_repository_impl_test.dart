@@ -11,9 +11,9 @@ void main() {
   late Directory tempDir;
   late AuthRepositoryImpl repository;
 
-  // Cheap Argon2id profile: these tests exercise the real KDF end-to-end,
-  // but at production cost (64 MiB) the suite would take far too long on
-  // constrained hardware.
+  // Perfil barato de Argon2id: estos tests ejercitan el KDF real de punta
+  // a punta, pero con el coste de producción (64 MiB) la suite tardaría
+  // demasiado en hardware limitado.
   const testParams = Argon2idParams(memoryKiB: 8, iterations: 1, parallelism: 1);
 
   setUp(() async {
@@ -90,7 +90,8 @@ void main() {
 
       expect(result, isA<AuthFailure>());
       expect((result as AuthFailure).reason, AuthFailureReason.wrongPassword);
-      // The old password must still work — nothing was overwritten.
+      // La contraseña antigua debe seguir funcionando — no se sobrescribió
+      // nada.
       expect(await repository.verifyMasterPassword('old-password'), isA<AuthSuccess>());
     });
 

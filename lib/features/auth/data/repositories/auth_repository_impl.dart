@@ -9,9 +9,9 @@ import '../../domain/entities/auth_result.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_local_data_source.dart';
 
-/// The verifier plaintext is fixed and non-secret: it authenticates under
-/// AES-GCM's MAC, not by being kept hidden, so a constant is fine here — see
-/// [AuthConfig]'s doc comment for why that's safe.
+/// El texto plano del verificador es fijo y no secreto: se autentica bajo
+/// el MAC de AES-GCM, no por mantenerse oculto, así que aquí una constante
+/// vale — ver el comentario de [AuthConfig] para saber por qué es seguro.
 final Uint8List _verifierPlainText = Uint8List.fromList(utf8.encode('nexuskeys.verifier.v1'));
 
 class AuthRepositoryImpl implements AuthRepository {
@@ -26,11 +26,12 @@ class AuthRepositoryImpl implements AuthRepository {
   final CryptoService _crypto;
   final AuthLocalDataSource _local;
 
-  /// KDF cost used when creating a *new* verifier (setup or password
-  /// change). Verification always re-uses whatever params are stored in
-  /// the existing [AuthConfig], so changing this doesn't invalidate
-  /// already-configured vaults. Overridable so tests don't have to pay for
-  /// the full 64 MiB production cost on every run.
+  /// Coste de KDF usado al crear un verificador *nuevo* (configuración
+  /// inicial o cambio de contraseña). La verificación siempre reutiliza los
+  /// parámetros guardados en el [AuthConfig] existente, así que cambiar
+  /// esto no invalida las bóvedas ya configuradas. Se puede sobrescribir
+  /// para que los tests no tengan que pagar el coste completo de
+  /// producción de 64 MiB en cada ejecución.
   final Argon2idParams _newVaultParams;
 
   @override
@@ -42,8 +43,9 @@ class AuthRepositoryImpl implements AuthRepository {
     final params = _newVaultParams;
     final key = await _crypto.deriveKey(password: password, salt: salt, params: params);
 
-    // `key` is handed back to the caller in AuthSuccess, so it isn't wiped
-    // here — ownership passes to whoever unlocks the vault with it.
+    // `key` se devuelve a quien llama dentro de AuthSuccess, así que aquí
+    // no se limpia — la propiedad pasa a quien desbloquee la bóveda con
+    // ella.
     final verifier = await _crypto.encrypt(plainText: _verifierPlainText, key: key);
     await _local.write(AuthConfig(
       salt: salt,
@@ -96,9 +98,9 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<AuthResult> deleteVault({required String password}) async {
     final verification = await verifyMasterPassword(password);
     if (verification is! AuthSuccess) return verification;
-    // Deleting the auth header needs no key at all, so this wipes it before
-    // returning — callers here should only check success/failure, never
-    // read .vaultKey off the result.
+    // Borrar la cabecera de autenticación no necesita ninguna clave, así
+    // que esto la limpia antes de devolver — quien llama aquí solo debe
+    // comprobar éxito/fallo, nunca leer .vaultKey del resultado.
     wipe(verification.vaultKey);
     await _local.delete();
     return verification;

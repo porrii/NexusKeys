@@ -8,9 +8,10 @@ import 'package:nexuskeys/features/vault/presentation/pages/item_details_page.da
 void main() {
   Widget wrap(Widget child) => MaterialApp(theme: AppTheme.dark, home: child);
 
-  // The details ListView (header + up to five field cards + the Editar/
-  // Eliminar row) doesn't fit the default test surface, so the button row
-  // never gets laid out and every finder for it comes back empty.
+  // El ListView de detalles (cabecera + hasta cinco tarjetas de campo + la
+  // fila Editar/Eliminar) no cabe en la superficie de test por defecto,
+  // así que la fila de botones nunca llega a distribuirse y todos los
+  // finders que la buscan vuelven vacíos.
   void useTallViewport(WidgetTester tester) {
     tester.view.physicalSize = const Size(400, 1400);
     tester.view.devicePixelRatio = 1.0;
@@ -70,8 +71,8 @@ void main() {
   testWidgets('shows a strength indicator matching the real entropy of the password', (tester) async {
     await tester.pumpWidget(wrap(ItemDetailsPage(item: googleItem())));
 
-    // 'S3cr3t!Password' spans all four character classes at 15 characters
-    // (~98 bits) — comfortably in the "Muy fuerte" bracket.
+    // 'S3cr3t!Password' abarca las cuatro clases de caracteres con 15
+    // caracteres (~98 bits) — cómodamente en el tramo "Muy fuerte".
     expect(find.text('Muy fuerte'), findsOneWidget);
   });
 

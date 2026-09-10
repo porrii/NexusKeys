@@ -27,7 +27,8 @@ void main() {
     authRepository = AuthRepositoryImpl(
       cryptoService: crypto,
       localDataSource: authLocal,
-      // Cheap Argon2id so the suite doesn't pay production KDF cost.
+      // Argon2id barato para que la suite no pague el coste de KDF de
+      // producción.
       argon2Params: const Argon2idParams(memoryKiB: 8, iterations: 1, parallelism: 1),
     );
     backupService = BackupService(
@@ -126,7 +127,7 @@ void main() {
     final exported = await backupService.buildExport();
     final validated = await backupService.validateImport(exported, 'correct-horse-battery-staple');
 
-    // Simulate a different device: wipe both files first.
+    // Simula otro dispositivo: borra ambos archivos primero.
     vaultSession.lock();
     final vaultFile = await vaultSession.resolveDatabaseFile();
     if (await vaultFile.exists()) await vaultFile.delete();

@@ -7,10 +7,10 @@ import '../../../../core/security/secure_bytes.dart';
 import '../../../auth/data/datasources/auth_local_data_source.dart';
 import '../../../auth/domain/entities/auth_config.dart';
 
-/// The result of a successful [BackupService.validateImport] — everything
-/// [BackupService.applyImport] needs, kept separate from validation so a
-/// caller can show "contraseña correcta, ¿sobrescribir tu bóveda actual?"
-/// before actually touching any files.
+/// El resultado de un [BackupService.validateImport] correcto — todo lo
+/// que necesita [BackupService.applyImport], separado de la validación
+/// para que quien llama pueda mostrar "contraseña correcta, ¿sobrescribir
+/// tu bóveda actual?" antes de tocar ningún archivo.
 class ValidatedBackup {
   const ValidatedBackup({required this.authConfig, required this.vaultBytes});
 
@@ -18,10 +18,11 @@ class ValidatedBackup {
   final Uint8List vaultBytes;
 }
 
-/// Thrown by [BackupService.validateImport] with a message safe to show
-/// directly to the user — it never reveals *why* in security-sensitive
-/// terms (e.g. it says "wrong password", not "HMAC verification failed"),
-/// matching how [AuthRepository] treats wrong-password vs. corrupted data.
+/// La lanza [BackupService.validateImport] con un mensaje seguro de
+/// mostrar directamente al usuario — nunca revela el *porqué* en términos
+/// sensibles de seguridad (p. ej. dice "contraseña incorrecta", no "falló
+/// la verificación del HMAC"), igual que [AuthRepository] trata contraseña
+/// incorrecta frente a datos corruptos.
 class BackupImportException implements Exception {
   const BackupImportException(this.message);
 
@@ -31,17 +32,18 @@ class BackupImportException implements Exception {
   String toString() => 'BackupImportException: $message';
 }
 
-/// Builds and restores the `.nexus` backup format from the spec: version,
-/// minimal metadata, a checksum, and encrypted data — restorable only with
-/// the master password.
+/// Construye y restaura el formato de backup `.nexus` de la
+/// especificación: versión, metadatos mínimos, un checksum y datos
+/// cifrados — restaurable solo con la contraseña maestra.
 ///
-/// The "encrypted data" is simply the vault database's own bytes, verbatim:
-/// it's already a complete SQLCipher-encrypted file, so wrapping it in
-/// another layer of encryption would add cost without adding security. The
-/// auth header (salt, Argon2id params, verifier) travels alongside it,
-/// unencrypted for the same reason [AuthConfig] itself is: its secrecy
-/// doesn't matter, only its integrity under the key, which the verifier's
-/// own AES-GCM MAC already guarantees.
+/// Los "datos cifrados" son simplemente los propios bytes de la base de
+/// datos de la bóveda, tal cual: ya es un archivo completo cifrado con
+/// SQLCipher, así que envolverlo en otra capa de cifrado añadiría coste
+/// sin añadir seguridad. La cabecera de autenticación (salt, parámetros de
+/// Argon2id, verificador) viaja junto a ellos, sin cifrar por la misma
+/// razón que el propio [AuthConfig]: su secreto no importa, solo su
+/// integridad bajo la clave, que el propio MAC de AES-GCM del verificador
+/// ya garantiza.
 class BackupService {
   BackupService({
     required CryptoService cryptoService,
@@ -49,10 +51,11 @@ class BackupService {
     required VaultSession vaultSession,
   })  : _crypto = cryptoService,
         _authLocal = authLocalDataSource,
-        // The field is private (_vaultSession) while the named constructor
-        // parameter stays public (vaultSession) for callers outside this
-        // library, so the initializing-formal shorthand the linter
-        // suggests isn't actually available here.
+        // El campo es privado (_vaultSession) mientras que el parámetro con
+        // nombre del constructor sigue siendo público (vaultSession) para
+        // quien llame desde fuera de esta librería, así que el atajo de
+        // "initializing formal" que sugiere el linter no está disponible
+        // aquí de verdad.
         // ignore: prefer_initializing_formals
         _vaultSession = vaultSession;
 
@@ -62,9 +65,10 @@ class BackupService {
   final AuthLocalDataSource _authLocal;
   final VaultSession _vaultSession;
 
-  /// Builds the `.nexus` file content from whatever is currently on disk.
-  /// Works whether the vault is locked or unlocked — it reads the raw
-  /// files, not through a live database connection.
+  /// Construye el contenido del archivo `.nexus` a partir de lo que haya en
+  /// disco en ese momento. Funciona tanto si la bóveda está bloqueada como
+  /// desbloqueada — lee los archivos en crudo, no a través de una conexión
+  /// viva a la base de datos.
   Future<Uint8List> buildExport() async {
     final authConfig = await _authLocal.read();
     if (authConfig == null) {
@@ -85,11 +89,12 @@ class BackupService {
     return Uint8List.fromList(utf8.encode(jsonEncode(envelope)));
   }
 
-  /// Parses [fileBytes] and checks that: it's well-formed, its format
-  /// version is one this app understands, its checksum matches (the file
-  /// wasn't corrupted or tampered with), and [masterPassword] actually
-  /// unlocks it. Throws [BackupImportException] with a user-facing message
-  /// on any failure — nothing is written to disk here.
+  /// Parsea [fileBytes] y comprueba que: está bien formado, su versión de
+  /// formato es una que esta app entiende, su checksum coincide (el
+  /// archivo no se corrompió ni se manipuló) y [masterPassword] lo
+  /// desbloquea de verdad. Lanza [BackupImportException] con un mensaje de
+  /// cara al usuario ante cualquier fallo — aquí no se escribe nada en
+  /// disco.
   Future<ValidatedBackup> validateImport(Uint8List fileBytes, String masterPassword) async {
     final Map<String, dynamic> envelope;
     try {
@@ -133,12 +138,13 @@ class BackupService {
     return ValidatedBackup(authConfig: authConfig, vaultBytes: vaultBytes);
   }
 
-  /// Replaces the device's current auth header and vault database with
-  /// [backup]'s. Irreversible — only call this after [validateImport]
-  /// succeeded and the user has confirmed overwriting whatever vault (if
-  /// any) already exists. Locks the session first: an open SQLCipher
-  /// connection would otherwise keep the file locked (especially on
-  /// Windows) while this tries to overwrite it.
+  /// Reemplaza la cabecera de autenticación y la base de datos de la
+  /// bóveda actuales del dispositivo por las de [backup]. Irreversible —
+  /// solo llámalo después de un [validateImport] correcto y de que el
+  /// usuario haya confirmado sobrescribir la bóveda que ya exista (si la
+  /// hay). Bloquea la sesión primero: si no, una conexión SQLCipher
+  /// abierta mantendría el archivo bloqueado (sobre todo en Windows)
+  /// mientras esto intenta sobrescribirlo.
   Future<void> applyImport(ValidatedBackup backup) async {
     _vaultSession.lock();
     await _authLocal.write(backup.authConfig);

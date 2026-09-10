@@ -5,22 +5,25 @@ import 'package:sqlite3/sqlite3.dart';
 import 'database_exceptions.dart';
 import 'vault_schema.dart';
 
-/// An open connection to the SQLCipher-encrypted vault database.
+/// Una conexión abierta a la base de datos de la bóveda cifrada con
+/// SQLCipher.
 ///
-/// Every byte on disk is encrypted by SQLCipher itself — this class never
-/// handles plaintext file content, only the raw key used to unlock it.
+/// Cada byte en disco lo cifra el propio SQLCipher — esta clase nunca
+/// maneja contenido de archivo en texto plano, solo la clave en crudo que
+/// se usa para desbloquearlo.
 class VaultDatabase {
   VaultDatabase._(this._db);
 
   final Database _db;
 
-  /// Opens (creating if needed) the encrypted database at [path] using the
-  /// raw 32-byte [key] — the same key Argon2id derives from the master
-  /// password, passed straight through rather than re-derived by
-  /// SQLCipher's own (weaker, PBKDF2-based) key derivation.
+  /// Abre (creándola si hace falta) la base de datos cifrada en [path]
+  /// usando la [key] de 32 bytes en crudo — la misma clave que Argon2id
+  /// deriva de la contraseña maestra, pasada tal cual en vez de volver a
+  /// derivarla con la derivación propia de SQLCipher (más débil, basada en
+  /// PBKDF2).
   ///
-  /// Throws [InvalidDatabaseKeyException] if [key] doesn't match a
-  /// database that already exists at [path].
+  /// Lanza [InvalidDatabaseKeyException] si [key] no coincide con una base
+  /// de datos que ya exista en [path].
   factory VaultDatabase.open(String path, Uint8List key) {
     final db = sqlite3.open(path);
     db.execute("PRAGMA key = \"x'${_toHex(key)}'\";");
@@ -31,9 +34,10 @@ class VaultDatabase {
 
   static void _verifyKey(Database db) {
     try {
-      // SQLCipher doesn't validate the key on open — only once something
-      // actually reads the (encrypted) database header does a wrong key
-      // surface, as a generic "file is not a database" SqliteException.
+      // SQLCipher no valida la clave al abrir — solo cuando algo lee de
+      // verdad la cabecera (cifrada) de la base de datos aparece una clave
+      // incorrecta, como una SqliteException genérica de "file is not a
+      // database".
       db.select('SELECT count(*) FROM sqlite_master;');
     } on SqliteException {
       db.close();
@@ -62,15 +66,16 @@ class VaultDatabase {
   static String _toHex(Uint8List bytes) =>
       bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
-  /// The underlying connection, for the vault feature's data sources to
-  /// run queries against once the CRUD layer is built.
+  /// La conexión subyacente, para que las fuentes de datos de la feature de
+  /// la bóveda ejecuten consultas contra ella una vez montada la capa CRUD.
   Database get raw => _db;
 
-  /// Re-encrypts the database in place under [newKey] — this is how
-  /// changing the master password actually re-protects the vault, not just
-  /// its auth verifier. Requires the connection to already be open under
-  /// its current (correct) key; SQLCipher does the re-encryption itself via
-  /// `PRAGMA rekey`, so nothing needs to be read out and rewritten manually.
+  /// Vuelve a cifrar la base de datos en el sitio bajo [newKey] — así es
+  /// como cambiar la contraseña maestra vuelve a proteger la bóveda de
+  /// verdad, no solo su verificador de autenticación. Requiere que la
+  /// conexión ya esté abierta con su clave actual (correcta); SQLCipher
+  /// hace el recifrado él mismo con `PRAGMA rekey`, así que no hay que leer
+  /// nada y reescribirlo a mano.
   void rekey(Uint8List newKey) {
     _db.execute("PRAGMA rekey = \"x'${_toHex(newKey)}'\";");
   }

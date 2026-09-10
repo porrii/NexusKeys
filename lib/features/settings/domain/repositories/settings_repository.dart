@@ -1,8 +1,9 @@
 import '../entities/app_settings.dart';
 
-/// See [VaultRepository]'s doc comment for why this exposes a synchronous
-/// [current] getter alongside a plain (non-replaying) [changes] stream
-/// rather than one stream that tries to replay its latest value.
+/// Ver el comentario de [VaultRepository] para saber por qué esto expone
+/// un getter síncrono [current] junto a un stream [changes] normal (que no
+/// reproduce) en vez de un único stream que intente reproducir su último
+/// valor.
 abstract interface class SettingsRepository {
   AppSettings get current;
   Stream<AppSettings> get changes;

@@ -10,9 +10,9 @@ import 'package:nexuskeys/features/vault/domain/entities/vault_item_type.dart';
 import 'package:nexuskeys/features/vault/domain/repositories/vault_repository.dart';
 import 'package:nexuskeys/features/vault/presentation/pages/edit_vault_item_page.dart';
 
-/// Minimal fake — only needed because EditVaultItemPage reads
-/// currentItems for the Etiquetas autocomplete suggestions. None of these
-/// tests exercise that suggestion list itself.
+/// Fake mínimo — solo hace falta porque EditVaultItemPage lee
+/// currentItems para las sugerencias de autocompletado de Etiquetas.
+/// Ninguno de estos tests ejercita esa lista de sugerencias en sí.
 class _EmptyVaultRepository implements VaultRepository {
   @override
   List<VaultItem> currentItems = const [];

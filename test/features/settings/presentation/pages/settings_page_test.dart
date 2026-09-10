@@ -55,10 +55,10 @@ class _FakeVaultKeyStore implements VaultKeyStore {
   bool get hasWarmedUpCipher => false;
 }
 
-/// verifyMasterPassword and deleteVault are both exercised from
-/// SettingsPage (biometric enable, and "Eliminar bóveda permanentemente"
-/// both confirm the master password the same way) — the rest belong to
-/// flows this file doesn't touch.
+/// verifyMasterPassword y deleteVault se ejercitan ambos desde
+/// SettingsPage (activar la biometría y "Eliminar bóveda permanentemente"
+/// confirman la contraseña maestra de la misma forma) — el resto pertenece
+/// a flujos que este archivo no toca.
 class _FakeAuthRepository implements AuthRepository {
   String? correctPassword = 'master-password';
   bool deleteVaultCalled = false;
@@ -92,10 +92,11 @@ class _FakeAuthRepository implements AuthRepository {
   }
 }
 
-/// Minimal fake — SettingsPage only needs a VaultRepository registered
-/// because navigating to "Papelera" pushes TrashPage, which reads one.
-/// None of these tests exercise trash behaviour itself (that's
-/// trash_page_test.dart's job), so every method here is a bare stub.
+/// Fake mínimo — SettingsPage solo necesita un VaultRepository registrado
+/// porque navegar a "Papelera" empuja TrashPage, que lee uno. Ninguno de
+/// estos tests ejercita el comportamiento de la papelera en sí (eso es
+/// cosa de trash_page_test.dart), así que aquí todos los métodos son un
+/// stub pelado.
 class _EmptyVaultRepository implements VaultRepository {
   @override
   List<VaultItem> currentItems = const [];
@@ -170,7 +171,8 @@ void main() {
 
   Widget wrap(Widget child) => MaterialApp(theme: AppTheme.dark, home: child);
 
-  // The full row list doesn't fit the default test surface.
+  // La lista completa de filas no cabe en la superficie de test por
+  // defecto.
   void useTallViewport(WidgetTester tester) {
     tester.view.physicalSize = const Size(400, 1600);
     tester.view.devicePixelRatio = 1.0;
@@ -250,10 +252,10 @@ void main() {
     expect(find.text('La papelera está vacía'), findsOneWidget);
   });
 
-  // These four exercise the "Autenticación biométrica" tile, which no
-  // longer renders at all when running on Windows (see the new hidden-tile
-  // test below) — skipped here rather than made conditional, since there
-  // would be nothing left to tap.
+  // Estos cuatro ejercitan el tile de "Autenticación biométrica", que ya
+  // no se renderiza en absoluto al ejecutar en Windows (ver el nuevo test
+  // de tile-oculto de abajo) — se saltan aquí en vez de hacerlos
+  // condicionales, ya que no quedaría nada que pulsar.
   testWidgets(
     'Autenticación biométrica warns when the device has no biometric support',
     (tester) async {
@@ -429,8 +431,9 @@ void main() {
     await tester.tap(find.text('Tema'));
     await tester.pumpAndSettle();
 
-    // Swapped in place, not pushed - the settings list (and its "Ajustes"
-    // header) is gone, replaced by the sub-page's own embedded header.
+    // Intercambiada en el sitio, no empujada — la lista de ajustes (y su
+    // cabecera "Ajustes") ya no está, sustituida por la cabecera embebida
+    // propia de la subpágina.
     expect(find.text('Ajustes'), findsNothing);
     expect(find.text('Tema'), findsOneWidget);
     expect(find.text('OLED'), findsOneWidget);

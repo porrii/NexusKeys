@@ -9,9 +9,9 @@ import 'package:nexuskeys/core/security/crypto_service_impl.dart';
 void main() {
   final crypto = CryptoServiceImpl();
 
-  // Real Argon2id costs (64 MiB) are deliberately slow for security; tests
-  // use a cheap profile so the suite stays fast while exercising the same
-  // code path.
+  // Los costes reales de Argon2id (64 MiB) son deliberadamente lentos por
+  // seguridad; los tests usan un perfil barato para que la suite siga
+  // siendo rápida ejercitando el mismo camino de código.
   const cheapParams = Argon2idParams(memoryKiB: 8, iterations: 1, parallelism: 1);
 
   group('randomBytes', () {

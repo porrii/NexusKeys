@@ -73,8 +73,9 @@ void main() {
 
     await repository.setThemeMode(AppThemeMode.light);
     await repository.setThemeMode(AppThemeMode.oled);
-    // Broadcast stream delivery is scheduled via microtask, not synchronous
-    // with .add() — flush the queue before asserting on what arrived.
+    // La entrega de un stream broadcast se programa vía microtask, no de
+    // forma síncrona con .add() — vacía la cola antes de comprobar lo que
+    // llegó.
     await Future<void>.delayed(Duration.zero);
 
     expect(emissions, [AppThemeMode.light, AppThemeMode.oled]);

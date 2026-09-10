@@ -2,16 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 
-/// A single row in the vault list — reproduces the item rows in
-/// img/03_vault.png: a colored avatar, title, subtitle, and either a
-/// favorite star or a chevron on the trailing edge.
+/// Una única fila de la lista de la bóveda — reproduce las filas de
+/// elemento de img/03_vault.png: un avatar con color, título, subtítulo y,
+/// en el borde derecho, o una estrella de favorito o un chevron.
 ///
-/// The reference mockup's sample items use real brand logos (Google,
-/// GitHub, YouTube...). Those aren't assets this project has a license to
-/// bundle, so real items fall back to a letter avatar tinted with the
-/// item's own `color` field — the same "Color/Icono" every vault item
-/// stores per the spec — which keeps the layout identical without
-/// fabricating trademarked artwork.
+/// Los elementos de ejemplo del mockup de referencia usan logos de marca
+/// reales (Google, GitHub, YouTube...). Esos no son assets que este
+/// proyecto tenga licencia para incluir, así que los elementos reales
+/// recurren a un avatar de letra teñido con el propio campo `color` del
+/// elemento — el mismo "Color/Icono" que guarda cada elemento de la bóveda
+/// según la especificación — lo que mantiene el layout idéntico sin
+/// fabricar arte con marcas registradas.
 class VaultItemTile extends StatelessWidget {
   const VaultItemTile({
     required this.title,
@@ -28,10 +29,11 @@ class VaultItemTile extends StatelessWidget {
   final Color avatarColor;
   final bool isFavorite;
 
-  /// img/07_search.png's result rows show a star (filled or outline) on
-  /// every row instead of img/03_vault.png's star-or-chevron — search
-  /// results are all "found", so the trailing icon there is purely a
-  /// favorite indicator, never a navigation chevron.
+  /// Las filas de resultado de img/07_search.png muestran una estrella
+  /// (rellena o de contorno) en todas las filas en vez del
+  /// estrella-o-chevron de img/03_vault.png — los resultados de búsqueda
+  /// están todos "encontrados", así que ahí el icono del final es puramente
+  /// un indicador de favorito, nunca un chevron de navegación.
   final bool alwaysShowStar;
   final VoidCallback? onTap;
 

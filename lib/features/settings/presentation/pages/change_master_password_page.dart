@@ -8,25 +8,29 @@ import '../../../auth/domain/entities/auth_result.dart';
 import '../../../auth/domain/repositories/auth_repository.dart';
 import '../../../auth/presentation/pages/create_master_password_page.dart';
 
-/// "Cambiar contraseña maestra" from img/08_settings.png. No mockup of its
-/// own — reuses the create-password form's field layout and validation.
+/// "Cambiar contraseña maestra" de img/08_settings.png. Sin mockup propio —
+/// reutiliza la distribución de campos y la validación del formulario de
+/// crear contraseña.
 ///
-/// Changing the master password has to re-key *two* things kept in sync by
-/// every other flow that touches them: the auth verifier (what
-/// [AuthRepository.changeMasterPassword] rotates) and the vault database
-/// itself, which stays encrypted under whatever key was derived at unlock
-/// time until something tells it otherwise. Skipping the second step would
-/// leave the vault permanently undecryptable the moment this "succeeds".
+/// Cambiar la contraseña maestra tiene que volver a cifrar *dos* cosas que
+/// todos los demás flujos que las tocan mantienen sincronizadas: el
+/// verificador de autenticación (lo que rota
+/// [AuthRepository.changeMasterPassword]) y la propia base de datos de la
+/// bóveda, que sigue cifrada bajo la clave que se derivó al desbloquear
+/// hasta que algo diga lo contrario. Saltarse el segundo paso dejaría la
+/// bóveda permanentemente indescifrable en el momento en que esto "tenga
+/// éxito".
 class ChangeMasterPasswordPage extends StatefulWidget {
   const ChangeMasterPasswordPage({super.key, this.embedded = false, this.onDone});
 
-  /// True when SettingsPage renders this inline in the wide layout instead
-  /// of pushing it as its own route — skips the Scaffold/AppBar and, on
-  /// success, calls [onDone] instead of popping (there's no route to pop).
+  /// True cuando SettingsPage la renderiza en línea en el layout ancho en
+  /// vez de empujarla como su propia ruta — se salta el Scaffold/AppBar y,
+  /// al terminar bien, llama a [onDone] en vez de hacer pop (no hay ruta
+  /// que cerrar).
   final bool embedded;
 
-  /// Called after a successful password change when [embedded] — the
-  /// non-embedded path shows a SnackBar and pops instead.
+  /// Se llama tras un cambio de contraseña correcto cuando [embedded] — la
+  /// vía no embebida muestra un SnackBar y hace pop en su lugar.
   final VoidCallback? onDone;
 
   @override

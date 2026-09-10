@@ -6,12 +6,13 @@ import 'package:equatable/equatable.dart';
 import '../../../../core/security/argon2_params.dart';
 import '../../../../core/security/crypto_service.dart';
 
-/// Everything needed to verify a master password and re-derive the vault
-/// key from it, persisted locally. None of these fields are secret on
-/// their own: the salt and KDF params only tune the cost of a brute-force
-/// attempt, and [verifierNonce]/[verifierCipherText]/[verifierMac] only
-/// authenticate under the correctly-derived key — they reveal nothing
-/// without it. The master password itself is never part of this object.
+/// Todo lo necesario para verificar una contraseña maestra y volver a
+/// derivar la clave de la bóveda a partir de ella, guardado en local.
+/// Ninguno de estos campos es secreto por sí solo: el salt y los
+/// parámetros del KDF solo ajustan el coste de un intento de fuerza bruta,
+/// y [verifierNonce]/[verifierCipherText]/[verifierMac] solo se autentican
+/// bajo la clave derivada correctamente — no revelan nada sin ella. La
+/// contraseña maestra en sí nunca forma parte de este objeto.
 class AuthConfig extends Equatable {
   const AuthConfig({
     required this.salt,

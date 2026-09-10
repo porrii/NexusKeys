@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/widgets/app_password_field.dart';
 
-/// Vault unlock screen — reproduces img/01_lock.png.
+/// Pantalla de desbloqueo de la bóveda — reproduce img/01_lock.png.
 ///
-/// This is the presentation shell only: it exposes callbacks for the
-/// actions a viewer can trigger (unlock, biometric unlock, other options)
-/// without depending on the authentication domain layer, which is wired in
-/// separately once Argon2id/AES-GCM verification is implemented.
+/// Es solo la envoltura de presentación: expone callbacks para las
+/// acciones que puede disparar quien la ve (desbloquear, desbloqueo
+/// biométrico, otras opciones) sin depender de la capa de dominio de
+/// autenticación, que se conecta aparte una vez implementada la
+/// verificación Argon2id/AES-GCM.
 class LockScreenPage extends StatefulWidget {
   const LockScreenPage({
     super.key,
@@ -25,11 +26,12 @@ class LockScreenPage extends StatefulWidget {
   final VoidCallback? onOtherOptions;
   final bool biometricAvailable;
 
-  /// Shows a spinner in the unlock button and disables input while true.
+  /// Muestra un spinner en el botón de desbloquear y desactiva la entrada
+  /// mientras sea true.
   final bool isUnlocking;
 
-  /// Feedback from the last failed attempt (e.g. "Contraseña incorrecta").
-  /// Null when there's nothing to show.
+  /// Aviso del último intento fallido (p. ej. "Contraseña incorrecta").
+  /// Null cuando no hay nada que mostrar.
   final String? errorText;
 
   @override
@@ -101,10 +103,10 @@ class _LockScreenPageState extends State<LockScreenPage> {
                       : const Text('Desbloquear'),
                 ),
               ),
-              // Hidden entirely rather than just disabled when there's no
-              // biometric unlock configured — there's nothing to fall back
-              // to yet, so a dimmed fingerprint icon and an "Otras opciones"
-              // that does nothing would just be visual noise.
+              // Se ocultan del todo, no solo se deshabilitan, cuando no hay
+              // desbloqueo biométrico configurado — todavía no hay nada a
+              // lo que recurrir, así que un icono de huella atenuado y un
+              // "Otras opciones" que no hace nada solo serían ruido visual.
               if (widget.biometricAvailable) ...[
                 const SizedBox(height: 28),
                 IconButton(

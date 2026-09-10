@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 import 'app_text_styles.dart';
 
-/// Corner radius shared by cards, inputs and buttons across every screen.
+/// Radio de esquina común a tarjetas, campos y botones en todas las
+/// pantallas.
 const double kAppRadius = 14.0;
 
-/// Builds the three [ThemeData] variants offered in Settings → Tema
-/// (img/12_theme.png): Claro, Oscuro and OLED. System mode simply picks
-/// between [light] and [dark] based on the platform brightness.
+/// Construye las tres variantes de [ThemeData] que ofrece Ajustes → Tema
+/// (img/12_theme.png): Claro, Oscuro y OLED. El modo sistema simplemente
+/// elige entre [light] y [dark] según el brillo de la plataforma.
 abstract final class AppTheme {
   static ThemeData get dark => _base(
         brightness: Brightness.dark,

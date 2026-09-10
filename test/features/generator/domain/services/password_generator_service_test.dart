@@ -81,7 +81,7 @@ void main() {
     });
 
     test('caps the length at the charset size rather than looping forever', () {
-      // Digits only: 10 possible characters, but 20 requested.
+      // Solo dígitos: 10 caracteres posibles, pero se piden 20.
       const options = GeneratorOptions(
         length: 20,
         useUppercase: false,

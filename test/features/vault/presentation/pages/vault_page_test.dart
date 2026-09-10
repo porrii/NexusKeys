@@ -23,10 +23,11 @@ import 'package:nexuskeys/features/vault/domain/entities/vault_item_type.dart';
 import 'package:nexuskeys/features/vault/domain/repositories/vault_repository.dart';
 import 'package:nexuskeys/features/vault/presentation/pages/vault_page.dart';
 
-/// Bare stubs — VaultPage's own tests never open the biometric-enabling
-/// flow inside SettingsPage, they just need SettingsPage to build at all
-/// (it reads these via the service locator in its State's field
-/// initializers). Real behaviour is covered by settings_page_test.dart.
+/// Stubs pelados — los tests propios de VaultPage nunca abren el flujo de
+/// activar la biometría dentro de SettingsPage, solo necesitan que
+/// SettingsPage llegue a construirse (lee esto vía el service locator en
+/// los inicializadores de campo de su State). El comportamiento real lo
+/// cubre settings_page_test.dart.
 class _StubBiometricService implements BiometricService {
   @override
   Future<bool> isDeviceSupported() async => false;
@@ -75,11 +76,11 @@ class _StubAuthRepository implements AuthRepository {
       throw UnimplementedError();
 }
 
-/// Hand-written fake instead of a mocking framework, mirroring
-/// FakeAuthRepository in auth_gate_page_test.dart. Its own correctness
-/// (real SQLCipher-backed behaviour) is covered separately by
-/// vault_repository_impl_test.dart; this fake only needs to be controllable
-/// enough to exercise VaultPage's UI logic.
+/// Fake escrito a mano en vez de un framework de mocking, reflejando a
+/// FakeAuthRepository de auth_gate_page_test.dart. Su propia corrección
+/// (el comportamiento real respaldado por SQLCipher) la cubre aparte
+/// vault_repository_impl_test.dart; este fake solo necesita ser lo
+/// bastante controlable para ejercitar la lógica de UI de VaultPage.
 class FakeVaultRepository implements VaultRepository {
   @override
   List<VaultItem> currentItems = [];
@@ -195,12 +196,13 @@ void main() {
         item(title: 'Correo Pro', username: 'ivan@protonmail.com'),
       ];
 
-  // ListView.builder only builds items within the viewport, and the default
-  // test surface is too short to fit all six sample rows below the app bar,
-  // search field and filter chips. Its 400-wide, phone-shaped size also
-  // keeps every test in this file below kVaultWideBreakpoint, since they
-  // all exercise the mobile Scaffold specifically — the wide layout has
-  // its own test file.
+  // ListView.builder solo construye los elementos dentro del viewport, y
+  // la superficie de test por defecto es demasiado baja para que quepan
+  // las seis filas de ejemplo bajo la app bar, el campo de búsqueda y los
+  // chips de filtro. Su tamaño de 400 de ancho, con forma de móvil,
+  // también mantiene todos los tests de este archivo por debajo de
+  // kVaultWideBreakpoint, ya que todos ejercitan el Scaffold de móvil en
+  // concreto — el layout ancho tiene su propio archivo de test.
   void useTallViewport(WidgetTester tester) {
     tester.view.physicalSize = const Size(400, 1400);
     tester.view.devicePixelRatio = 1.0;
@@ -281,8 +283,8 @@ void main() {
     expect(find.text('Editar'), findsOneWidget);
     expect(find.text('Eliminar'), findsOneWidget);
     expect(find.text('ivan_dev'), findsOneWidget);
-    // The bottom nav must stay put across every section of the app —
-    // viewing an item's details is not an exception.
+    // La navegación inferior debe quedarse fija en todas las secciones de
+    // la app — ver los detalles de un elemento no es una excepción.
     expect(find.byType(NavigationBar), findsOneWidget);
   });
 

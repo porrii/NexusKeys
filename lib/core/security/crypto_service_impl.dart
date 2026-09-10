@@ -6,9 +6,10 @@ import 'package:cryptography/cryptography.dart' as crypto;
 import 'argon2_params.dart';
 import 'crypto_service.dart';
 
-/// [CryptoService] backed by `package:cryptography`. AES-256-GCM and SHA-512
-/// use its pure-Dart/platform-accelerated implementations (accelerated on
-/// Android/iOS/macOS once `cryptography_flutter` is registered in `main()`).
+/// [CryptoService] respaldado por `package:cryptography`. AES-256-GCM y
+/// SHA-512 usan sus implementaciones en Dart puro / aceleradas por
+/// plataforma (aceleradas en Android/iOS/macOS una vez `cryptography_flutter`
+/// se registra en `main()`).
 class CryptoServiceImpl implements CryptoService {
   CryptoServiceImpl() : _random = Random.secure();
 

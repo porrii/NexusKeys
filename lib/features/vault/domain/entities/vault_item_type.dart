@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
-/// Every kind of secret the vault can hold. Kept to a small set of
-/// genuinely distinct kinds — each one shows its own fields in
-/// EditVaultItemPage rather than a one-size-fits-all form — instead of the
-/// much longer list a generic password manager spec might suggest, most of
-/// which would never actually get used and wouldn't look any different
-/// from "Contraseña" anyway.
+/// Todos los tipos de secreto que puede guardar la bóveda. Se mantiene en
+/// un conjunto pequeño de tipos genuinamente distintos — cada uno muestra
+/// sus propios campos en EditVaultItemPage en vez de un formulario único
+/// para todo — en vez de la lista mucho más larga que podría sugerir la
+/// especificación de un gestor de contraseñas genérico, la mayoría de la
+/// cual nunca se usaría de verdad y de todas formas no se vería distinta de
+/// "Contraseña".
 enum VaultItemType {
   password(label: 'Contraseña', icon: Icons.lock_outline, color: Color(0xFF0D49D2)),
   card(label: 'Tarjeta bancaria', icon: Icons.credit_card_outlined, color: Color(0xFF1565C0)),
@@ -19,9 +20,10 @@ enum VaultItemType {
   final IconData icon;
   final Color color;
 
-  /// The stable string persisted in `vault_items.type` — deliberately
-  /// separate from [name] so renaming an enum value in code later can't
-  /// silently change what's already on disk.
+  /// La cadena estable que se guarda en `vault_items.type` —
+  /// deliberadamente separada de [name] para que renombrar más tarde un
+  /// valor del enum en el código no cambie en silencio lo que ya está en
+  /// disco.
   String get storageKey => switch (this) {
         VaultItemType.password => 'password',
         VaultItemType.card => 'card',

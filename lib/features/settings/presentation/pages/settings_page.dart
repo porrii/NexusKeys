@@ -22,38 +22,42 @@ import 'tags_page.dart';
 import 'theme_settings_page.dart';
 import 'trash_page.dart';
 
-/// Reproduces img/08_settings.png.
+/// Reproduce img/08_settings.png.
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key, this.onLock, this.onVaultDeleted, this.embedded = false});
 
-  /// Only used by "Importar / Exportar": a successful restore replaces the
-  /// auth header this session was unlocked with, so the app has to drop
-  /// back to the lock screen — see ImportExportPage's own doc comment.
+  /// Solo lo usa "Importar / Exportar": una restauración correcta reemplaza
+  /// la cabecera de autenticación con la que se desbloqueó esta sesión, así
+  /// que la app tiene que volver a la pantalla de bloqueo — ver el
+  /// comentario de ImportExportPage.
   final VoidCallback? onLock;
 
-  /// Called after "Eliminar bóveda permanentemente" actually succeeds, so
-  /// the app can drop back to the welcome screen instead of a lock screen
-  /// with nothing left to unlock.
+  /// Se llama cuando "Eliminar bóveda permanentemente" tiene éxito de
+  /// verdad, para que la app pueda volver a la pantalla de bienvenida en
+  /// vez de a una pantalla de bloqueo sin nada que desbloquear.
   final VoidCallback? onVaultDeleted;
 
-  /// True on wide layouts (img/13_tablet.png, img/14_windows.png), where
-  /// this renders inline next to the sidebar instead of behind its own
-  /// Scaffold/AppBar reached by pushing a route over everything else. Its
-  /// own sub-pages (Bloqueo automático, Tema, ...) still push as full
-  /// routes over the sidebar either way — only this top-level list embeds.
+  /// True en los layouts anchos (img/13_tablet.png, img/14_windows.png),
+  /// donde esto se renderiza en línea junto a la barra lateral en vez de
+  /// tras su propio Scaffold/AppBar al que se llega empujando una ruta
+  /// sobre todo lo demás. Sus propias subpáginas (Bloqueo automático,
+  /// Tema, ...) — cuando NO está embebida — siguen empujándose como rutas
+  /// completas sobre la barra lateral; solo esta lista de primer nivel se
+  /// embebe.
   final bool embedded;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
-/// Ajustes' own sub-pages (Bloqueo automático, Tema, ...) — kept as an
-/// internal state on [SettingsPage] rather than a route, so switching to one
-/// while [SettingsPage.embedded] keeps the wide layout's sidebar visible
-/// instead of covering it with a pushed route. "Licencias" isn't here: the
-/// framework's [LicensePage] always builds its own Scaffold/AppBar with no
-/// way back to this list when it isn't reached via a real route push, so it
-/// keeps using [showLicensePage] even when embedded.
+/// Las subpáginas propias de Ajustes (Bloqueo automático, Tema, ...) —
+/// mantenidas como estado interno de [SettingsPage] en vez de como una
+/// ruta, para que cambiar a una mientras [SettingsPage.embedded] mantenga
+/// visible la barra lateral del layout ancho en vez de taparla con una
+/// ruta empujada. "Licencias" no está aquí: la [LicensePage] del framework
+/// siempre construye su propio Scaffold/AppBar sin forma de volver a esta
+/// lista cuando no se llega a ella por un push de ruta real, así que sigue
+/// usando [showLicensePage] incluso cuando está embebida.
 enum _SettingsSubView { autoLock, changePassword, theme, language, importExport }
 
 class _SettingsPageState extends State<SettingsPage> {
@@ -112,10 +116,11 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  /// Disabling just clears the stored key. Enabling needs the master
-  /// password re-entered first: Settings never has the raw vault key lying
-  /// around (it's wiped right after the vault is unlocked), so this is the
-  /// only place that can derive a fresh copy to hand to [VaultKeyStore].
+  /// Desactivar solo borra la clave guardada. Activar necesita que se
+  /// vuelva a introducir la contraseña maestra: Ajustes nunca tiene la
+  /// clave de la bóveda en crudo por ahí (se limpia justo después de
+  /// desbloquear la bóveda), así que este es el único sitio que puede
+  /// derivar una copia nueva para entregársela a [VaultKeyStore].
   Future<void> _toggleBiometric() async {
     final available = await _biometricService.isDeviceSupported();
     if (!mounted) return;
@@ -146,10 +151,11 @@ class _SettingsPageState extends State<SettingsPage> {
     }
 
     final vaultKey = result.vaultKey;
-    // VaultKeyStore.save writes to a Keystore entry that requires user
-    // authentication to even encrypt into, so this alone is what shows the
-    // native biometric prompt — no separate BiometricService call needed
-    // here, that would just prompt the user twice.
+    // VaultKeyStore.save escribe en una entrada del Keystore que exige
+    // autenticación del usuario incluso para cifrar en ella, así que esto
+    // por sí solo es lo que muestra el prompt biométrico nativo — no hace
+    // falta una llamada aparte a BiometricService aquí, solo preguntaría
+    // al usuario dos veces.
     bool saved = false;
     try {
       await _vaultKeyStore.save(vaultKey);
@@ -263,8 +269,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 ? setState(() => _embeddedSubView = _SettingsSubView.changePassword)
                 : _push(const ChangeMasterPasswordPage()),
           ),
-          // Windows has no biometric hardware/API this app can use — there's
-          // nothing to toggle there.
+          // Windows no tiene hardware/API biométrico que esta app pueda
+          // usar — ahí no hay nada que activar/desactivar.
           if (!Platform.isWindows)
             _SettingsTile(
               title: 'Autenticación biométrica',
@@ -294,8 +300,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 ? setState(() => _embeddedSubView = _SettingsSubView.language)
                 : _push(const LanguageSettingsPage()),
           ),
-          // Already direct sidebar destinations in the wide layout — listing
-          // them here too would just be a redundant second way in.
+          // Ya son destinos directos de la barra lateral en el layout
+          // ancho — listarlos aquí también sería solo una segunda vía de
+          // acceso redundante.
           if (!widget.embedded) ...[
             _SettingsTile(title: 'Etiquetas', onTap: () => _push(const TagsPage())),
             _SettingsTile(title: 'Papelera', onTap: () => _push(const TrashPage())),
@@ -405,7 +412,7 @@ class _SettingsSwitchTile extends StatelessWidget {
 class _AppFooter extends StatelessWidget {
   const _AppFooter({required this.version});
 
-  /// Null while [PackageInfo.fromPlatform] is still resolving.
+  /// Null mientras [PackageInfo.fromPlatform] todavía se está resolviendo.
   final String? version;
 
   @override

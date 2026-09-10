@@ -1,32 +1,36 @@
 import 'dart:typed_data';
 
-/// Persists the derived vault key for biometric unlock, so that path can
-/// skip re-deriving it from the master password. Implementations must back
-/// this with OS Keystore-backed storage (never plain prefs/registry) — see
-/// `SecureVaultKeyStore`, which backs [read]/[save] with a Keystore key
-/// requiring real biometric authentication to decrypt/encrypt.
+/// Guarda la clave de la bóveda derivada para el desbloqueo biométrico,
+/// para que esa vía pueda saltarse el volver a derivarla de la contraseña
+/// maestra. Las implementaciones deben respaldarlo con almacenamiento del
+/// Keystore del SO (nunca prefs/registro en plano) — ver
+/// `SecureVaultKeyStore`, que respalda [read]/[save] con una clave del
+/// Keystore que exige autenticación biométrica real para
+/// descifrar/cifrar.
 ///
-/// [read] is *not* reliably gated by that on its own, though: on Android,
-/// the underlying storage only actually shows the native prompt the first
-/// time this process touches it, then keeps the unlocked cipher in memory
-/// and reuses it silently for the rest of the process — see
-/// [hasWarmedUpCipher]. `BiometricPromptPage` is what makes every attempt
-/// actually ask, by calling `BiometricService.authenticate` itself first
-/// whenever [hasWarmedUpCipher] says [read] wouldn't ask on its own.
+/// [read] no está fiablemente protegido por eso por sí solo, eso sí: en
+/// Android, el almacenamiento subyacente solo muestra el prompt nativo la
+/// primera vez que este proceso lo toca, y luego mantiene el cifrado
+/// desbloqueado en memoria y lo reutiliza en silencio durante el resto del
+/// proceso — ver [hasWarmedUpCipher]. `BiometricPromptPage` es lo que hace
+/// que cada intento pregunte de verdad, llamando él mismo primero a
+/// `BiometricService.authenticate` siempre que [hasWarmedUpCipher] diga
+/// que [read] no preguntaría por su cuenta.
 abstract interface class VaultKeyStore {
   Future<bool> get hasStoredKey;
 
   Future<void> save(Uint8List vaultKey);
 
-  /// Null if nothing has been stored (or it was cleared).
+  /// Null si no se ha guardado nada (o se limpió).
   Future<Uint8List?> read();
 
   Future<void> clear();
 
-  /// True once [read] or [save] has already made the underlying storage
-  /// authenticate at least once during this app process. Always false at
-  /// cold start, and stays false again after the *next* cold start — this
-  /// tracks the plugin's own in-memory cipher cache, not anything
-  /// persisted. See the class doc for why `BiometricPromptPage` needs it.
+  /// True una vez [read] o [save] ha hecho que el almacenamiento
+  /// subyacente se autentique al menos una vez durante este proceso de la
+  /// app. Siempre false en el arranque en frío, y vuelve a ser false tras
+  /// el *siguiente* arranque en frío — esto sigue la caché de cifrado en
+  /// memoria del propio plugin, no nada persistido. Ver la doc de la clase
+  /// para saber por qué lo necesita `BiometricPromptPage`.
   bool get hasWarmedUpCipher;
 }

@@ -2,29 +2,31 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 
-/// "Idioma" from img/08_settings.png. The spec asks for the app to be
-/// "prepared for internationalization" without requiring full multi-locale
-/// support yet — this shows the one real option (Español) rather than a
-/// bare "coming soon" stub, since there genuinely is a current setting to
-/// display, it just isn't changeable to anything else yet.
+/// "Idioma" de img/08_settings.png. La especificación pide que la app esté
+/// "preparada para la internacionalización" sin exigir todavía soporte
+/// multi-idioma completo — esto muestra la única opción real (Español) en
+/// vez de un simple "próximamente", ya que de verdad hay un ajuste actual
+/// que mostrar, solo que aún no se puede cambiar a otra cosa.
 class LanguageSettingsPage extends StatelessWidget {
   const LanguageSettingsPage({super.key, this.embedded = false});
 
-  /// True when SettingsPage renders this inline in the wide layout instead
-  /// of pushing it as its own route — skips the Scaffold/AppBar, since the
-  /// parent already supplies a header (with a back arrow) around it.
+  /// True cuando SettingsPage la renderiza en línea en el layout ancho en
+  /// vez de empujarla como su propia ruta — se salta el Scaffold/AppBar,
+  /// ya que el padre ya aporta una cabecera (con flecha de volver)
+  /// alrededor.
   final bool embedded;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    // A ListView, not a lone Card centered/stretched in the body: with just
-    // one language there's nothing to scroll, but sizing itself to content
-    // (as ThemeSettingsPage's option list also does) keeps this from
-    // stretching to fill the whole panel the way a bare Card would when
-    // this renders embedded inside an Expanded — same fix either way, one
-    // language or several.
+    // Un ListView, no una Card suelta centrada/estirada en el body: con un
+    // solo idioma no hay nada que hacer scroll, pero dimensionarse al
+    // contenido (como también hace la lista de opciones de
+    // ThemeSettingsPage) evita que esto se estire para llenar todo el
+    // panel como haría una Card pelada cuando se renderiza embebida dentro
+    // de un Expanded — el mismo arreglo tanto con un idioma como con
+    // varios.
     final list = ListView(
       padding: const EdgeInsets.all(20),
       children: [

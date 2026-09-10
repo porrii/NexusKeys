@@ -6,17 +6,17 @@ import '../../../../core/di/service_locator.dart';
 import '../../domain/services/biometric_service.dart';
 import '../../domain/services/vault_key_store.dart';
 
-/// Reproduces img/10_biometric.png. Shown when the user taps the fingerprint
-/// icon on the lock screen — this is NexusKeys' own branded rationale
-/// screen, not the actual capture UI, since Flutter has no direct sensor
-/// access. The real fingerprint/face capture happens in the OS's own
-/// `BiometricPrompt`.
+/// Reproduce img/10_biometric.png. Se muestra cuando el usuario pulsa el
+/// icono de huella en la pantalla de bloqueo — es la pantalla de
+/// justificación con la marca de NexusKeys, no la UI de captura real, ya
+/// que Flutter no tiene acceso directo al sensor. La captura real de
+/// huella/cara ocurre en el propio `BiometricPrompt` del SO.
 ///
-/// Pops with the retrieved vault key on success, or `null` on cancel or a
-/// failed/declined attempt. The caller (AuthGatePage) unlocks
-/// [VaultSession] with the result exactly the way it does after a
-/// password-based [AuthSuccess] — this page never touches the session
-/// itself.
+/// Hace pop con la clave de la bóveda recuperada si tiene éxito, o `null`
+/// si se cancela o el intento falla/se rechaza. Quien llama (AuthGatePage)
+/// desbloquea [VaultSession] con el resultado exactamente igual que
+/// después de un [AuthSuccess] por contraseña — esta página nunca toca la
+/// sesión en sí.
 class BiometricPromptPage extends StatefulWidget {
   const BiometricPromptPage({super.key});
 
@@ -40,15 +40,16 @@ class _BiometricPromptPageState extends State<BiometricPromptPage> {
     if (_isAuthenticating) return;
     setState(() => _isAuthenticating = true);
 
-    // [VaultKeyStore.read]'s own Keystore entry requires user authentication
-    // to decrypt — but flutter_secure_storage only actually shows that
-    // native prompt the *first* time this app process touches it; after
-    // that it keeps the already-unlocked cipher in memory and reuses it
-    // silently for the rest of the process. [hasWarmedUpCipher] says which
-    // case this is: false the first time (read() below is about to show
-    // the real prompt itself — asking again first would just double it
-    // up), true every time after (read() would now unlock silently on its
-    // own, so this is the only prompt that will actually ask).
+    // La entrada del Keystore de [VaultKeyStore.read] exige autenticación
+    // del usuario para descifrarse — pero flutter_secure_storage solo
+    // muestra ese prompt nativo la *primera* vez que este proceso de la
+    // app la toca; después mantiene el cifrado ya desbloqueado en memoria y
+    // lo reutiliza en silencio durante el resto del proceso.
+    // [hasWarmedUpCipher] dice de qué caso se trata: false la primera vez
+    // (el read() de abajo va a mostrar el prompt real él mismo — volver a
+    // preguntar antes solo lo duplicaría), true cada vez después (read()
+    // ahora desbloquearía en silencio por su cuenta, así que este es el
+    // único prompt que va a preguntar de verdad).
     if (_vaultKeyStore.hasWarmedUpCipher) {
       final confirmed = await _biometricService.authenticate(
         reason: 'Usa tu huella dactilar para continuar',

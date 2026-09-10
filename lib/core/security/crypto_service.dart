@@ -2,9 +2,9 @@ import 'dart:typed_data';
 
 import 'argon2_params.dart';
 
-/// The result of an AES-256-GCM encryption: everything needed to decrypt,
-/// none of it secret except [cipherText] (the nonce and MAC are safe to
-/// store alongside it).
+/// El resultado de un cifrado AES-256-GCM: todo lo necesario para
+/// descifrar, nada de ello secreto salvo [cipherText] (el nonce y el MAC
+/// se pueden guardar junto a él sin problema).
 class EncryptedPayload {
   const EncryptedPayload({
     required this.nonce,
@@ -17,9 +17,9 @@ class EncryptedPayload {
   final Uint8List mac;
 }
 
-/// Thrown by [CryptoService.decrypt] when the MAC doesn't match — either the
-/// key is wrong or the data was tampered with. Callers must not distinguish
-/// between those two cases in user-facing messages.
+/// La lanza [CryptoService.decrypt] cuando el MAC no coincide — o la clave
+/// es incorrecta o se manipularon los datos. Quien la recibe no debe
+/// distinguir entre esos dos casos en los mensajes de cara al usuario.
 class AuthenticationFailedException implements Exception {
   const AuthenticationFailedException();
 
@@ -27,39 +27,40 @@ class AuthenticationFailedException implements Exception {
   String toString() => 'AuthenticationFailedException: decryption failed integrity check';
 }
 
-/// Every cryptographic primitive the app needs, isolated behind one
-/// interface so the rest of the codebase never touches `package:cryptography`
-/// directly. Backed by [CryptoServiceImpl].
+/// Todas las primitivas criptográficas que necesita la app, aisladas tras
+/// una única interfaz para que el resto del código nunca toque
+/// `package:cryptography` directamente. Implementada por [CryptoServiceImpl].
 abstract interface class CryptoService {
-  /// Derives a 32-byte key from [password] and [salt] using Argon2id.
-  /// The same inputs always produce the same output — this is what makes
-  /// master password verification possible without storing the password.
+  /// Deriva una clave de 32 bytes a partir de [password] y [salt] usando
+  /// Argon2id. Las mismas entradas producen siempre la misma salida — eso
+  /// es lo que hace posible verificar la contraseña maestra sin
+  /// guardarla.
   Future<Uint8List> deriveKey({
     required String password,
     required Uint8List salt,
     required Argon2idParams params,
   });
 
-  /// Cryptographically secure random bytes (CSPRNG), suitable for salts,
-  /// nonces and encryption keys.
+  /// Bytes aleatorios criptográficamente seguros (CSPRNG), aptos para
+  /// salts, nonces y claves de cifrado.
   Uint8List randomBytes(int length);
 
-  /// Encrypts [plainText] with AES-256-GCM under [key] (must be 32 bytes).
-  /// A fresh random nonce is generated for every call.
+  /// Cifra [plainText] con AES-256-GCM bajo [key] (debe ser de 32 bytes).
+  /// Se genera un nonce aleatorio nuevo en cada llamada.
   Future<EncryptedPayload> encrypt({
     required Uint8List plainText,
     required Uint8List key,
   });
 
-  /// Decrypts a payload produced by [encrypt]. Throws
-  /// [AuthenticationFailedException] if [key] is wrong or the data was
-  /// tampered with.
+  /// Descifra un payload producido por [encrypt]. Lanza
+  /// [AuthenticationFailedException] si [key] es incorrecta o los datos se
+  /// manipularon.
   Future<Uint8List> decrypt({
     required EncryptedPayload payload,
     required Uint8List key,
   });
 
-  /// SHA-512 digest, used for non-secret integrity checksums (e.g. the
-  /// `.nexus` export format).
+  /// Resumen SHA-512, usado para checksums de integridad no secretos (p.
+  /// ej. el formato de exportación `.nexus`).
   Future<Uint8List> sha512(Uint8List data);
 }

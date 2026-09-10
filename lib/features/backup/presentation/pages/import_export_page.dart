@@ -8,13 +8,14 @@ import '../../../../core/di/service_locator.dart';
 import '../../../../core/widgets/app_password_field.dart';
 import '../../domain/services/backup_service.dart';
 
-/// Reproduces img/09_import_export.png. Reused both from Ajustes (export a
-/// backup, or restore one over the current vault) and from
-/// img/02_welcome.png's "Abrir bóveda existente" (import to bootstrap a
-/// vault on a fresh install) — [onImportComplete] lets each caller decide
-/// what happens after a successful restore, since that differs: Ajustes
-/// needs to drop back to the lock screen (the auth header was just
-/// replaced), the welcome flow needs to unlock straight in.
+/// Reproduce img/09_import_export.png. Se reutiliza tanto desde Ajustes
+/// (exportar un backup, o restaurar uno sobre la bóveda actual) como desde
+/// el "Abrir bóveda existente" de img/02_welcome.png (importar para
+/// arrancar una bóveda en una instalación nueva) — [onImportComplete] deja
+/// que cada llamante decida qué pasa tras una restauración correcta, ya
+/// que difiere: Ajustes tiene que volver a la pantalla de bloqueo (la
+/// cabecera de autenticación se acaba de reemplazar), y el flujo de
+/// bienvenida tiene que desbloquear directo.
 class ImportExportPage extends StatefulWidget {
   const ImportExportPage({
     super.key,
@@ -25,13 +26,15 @@ class ImportExportPage extends StatefulWidget {
 
   final VoidCallback? onImportComplete;
 
-  /// False from the welcome flow: there's no vault to export yet on a
-  /// fresh install, so offering that button there was always a dead end.
+  /// False desde el flujo de bienvenida: en una instalación nueva todavía
+  /// no hay bóveda que exportar, así que ofrecer ese botón ahí siempre fue
+  /// un callejón sin salida.
   final bool showExportSection;
 
-  /// True when SettingsPage renders this inline in the wide layout instead
-  /// of pushing it as its own route — skips the Scaffold/AppBar, since the
-  /// parent already supplies a header (with a back arrow) around it.
+  /// True cuando SettingsPage la renderiza en línea en el layout ancho en
+  /// vez de empujarla como su propia ruta — se salta el Scaffold/AppBar,
+  /// ya que el padre ya aporta una cabecera (con flecha de volver)
+  /// alrededor.
   final bool embedded;
 
   @override
@@ -53,7 +56,7 @@ class _ImportExportPageState extends State<ImportExportPage> {
 
       if (!mounted) return;
       setState(() => _isBusy = false);
-      if (path == null) return; // user cancelled the save dialog
+      if (path == null) return; // el usuario canceló el diálogo de guardado
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
@@ -73,12 +76,13 @@ class _ImportExportPageState extends State<ImportExportPage> {
     }
   }
 
-  /// file_selector's own save dialog (`getSaveLocation`) only exists on
-  /// Windows/macOS/Linux — Android has no equivalent there, so this uses
-  /// file_picker instead, which writes [bytes] through Android's Storage
-  /// Access Framework on Android and a native save dialog everywhere else,
-  /// giving the user a real "choose where to save" prompt on every
-  /// platform NexusKeys ships on.
+  /// El diálogo de guardado propio de file_selector (`getSaveLocation`)
+  /// solo existe en Windows/macOS/Linux — Android no tiene equivalente
+  /// ahí, así que esto usa file_picker en su lugar, que escribe [bytes] a
+  /// través del Storage Access Framework en Android y un diálogo de
+  /// guardado nativo en el resto, dando al usuario un "elige dónde
+  /// guardar" real en todas las plataformas en las que se distribuye
+  /// NexusKeys.
   Future<String?> _saveExport(Uint8List bytes, String fileName) async {
     final uri = await FilePicker.saveFile(
       fileName: fileName,
@@ -87,7 +91,7 @@ class _ImportExportPageState extends State<ImportExportPage> {
       type: FileType.custom,
       allowedExtensions: const ['nexus'],
     );
-    if (uri == null) return null; // user cancelled
+    if (uri == null) return null; // el usuario canceló
     return uri.scheme == 'file' ? uri.toFilePath() : uri.toString();
   }
 

@@ -5,16 +5,18 @@ import '../../../../core/widgets/embedded_section_header.dart';
 import '../../../vault/domain/entities/vault_item.dart';
 import '../../../vault/domain/repositories/vault_repository.dart';
 
-/// "Papelera" from img/08_settings.png — no mockup of its own. Every item
-/// here was soft-deleted via [VaultRepository.moveToTrash]; this is where
-/// that trash actually becomes reachable again (restore) or final
-/// (eliminar permanentemente), rather than sitting inaccessible forever.
+/// "Papelera" de img/08_settings.png — sin mockup propio. Cada elemento de
+/// aquí se borró de forma suave con [VaultRepository.moveToTrash]; este es
+/// el sitio donde esa papelera vuelve a ser alcanzable (restaurar) o
+/// definitiva (eliminar permanentemente), en vez de quedarse inaccesible
+/// para siempre.
 class TrashPage extends StatefulWidget {
   const TrashPage({super.key, this.embedded = false});
 
-  /// True on wide layouts (img/13_tablet.png, img/14_windows.png), where
-  /// this renders inline next to the sidebar instead of behind its own
-  /// Scaffold/AppBar reached by pushing a route over everything else.
+  /// True en los layouts anchos (img/13_tablet.png, img/14_windows.png),
+  /// donde esto se renderiza en línea junto a la barra lateral en vez de
+  /// tras su propio Scaffold/AppBar al que se llega empujando una ruta
+  /// sobre todo lo demás.
   final bool embedded;
 
   @override

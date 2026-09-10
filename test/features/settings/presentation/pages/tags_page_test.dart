@@ -104,8 +104,8 @@ void main() {
     sl.registerSingleton<VaultRepository>(repository);
 
     await tester.pumpWidget(wrap(const TagsPage()));
-    // Tags render alphabetically ('Dev' before 'Work') — the last menu
-    // button is the one on the 'Work' row.
+    // Las etiquetas se renderizan alfabéticamente ('Dev' antes que
+    // 'Work') — el último botón de menú es el de la fila de 'Work'.
     await tester.tap(find.byIcon(Icons.more_vert).last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Renombrar'));
@@ -128,8 +128,8 @@ void main() {
     sl.registerSingleton<VaultRepository>(repository);
 
     await tester.pumpWidget(wrap(const TagsPage()));
-    // Tags render alphabetically ('Dev' before 'Work') — the last menu
-    // button is the one on the 'Work' row.
+    // Las etiquetas se renderizan alfabéticamente ('Dev' antes que
+    // 'Work') — el último botón de menú es el de la fila de 'Work'.
     await tester.tap(find.byIcon(Icons.more_vert).last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Eliminar'));

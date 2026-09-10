@@ -10,7 +10,7 @@ import 'package:nexuskeys/features/auth/domain/entities/auth_result.dart';
 import 'package:nexuskeys/features/auth/domain/repositories/auth_repository.dart';
 import 'package:nexuskeys/features/settings/presentation/pages/change_master_password_page.dart';
 
-/// Hand-written fake, mirroring the one in auth_gate_page_test.dart.
+/// Fake escrito a mano, reflejando al de auth_gate_page_test.dart.
 class FakeAuthRepository implements AuthRepository {
   String configuredPassword = 'old-password';
 

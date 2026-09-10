@@ -20,18 +20,19 @@ import 'welcome_page.dart';
 
 enum _Screen { loading, welcome, lock, vault }
 
-/// Decides which screen opens the app: [WelcomePage] if no master password
-/// has been configured yet, [LockScreenPage] otherwise. Owns navigation
-/// between every screen in the auth flow so each page itself stays a pure,
-/// easily-testable presentation shell.
+/// Decide qué pantalla abre la app: [WelcomePage] si aún no se ha
+/// configurado ninguna contraseña maestra, [LockScreenPage] en caso
+/// contrario. Es dueña de la navegación entre todas las pantallas del
+/// flujo de autenticación para que cada página siga siendo una envoltura
+/// de presentación pura y fácil de testear.
 ///
-/// [welcome], [lock] and [vault] are swapped in place via [setState] rather
-/// than pushed as separate routes — this widget lives for the whole app
-/// session, so its `context` is never invalidated by a route transition the
-/// way it would be if a callback captured the context of a page that had
-/// since been popped or replaced. [CreateMasterPasswordPage] is the one
-/// genuine sub-screen, reached with a normal push/pop since it has its own
-/// back button.
+/// [welcome], [lock] y [vault] se intercambian en el sitio con [setState]
+/// en vez de empujarse como rutas separadas — este widget vive durante
+/// toda la sesión de la app, así que su `context` nunca lo invalida una
+/// transición de ruta como pasaría si un callback capturase el context de
+/// una página que se hubiera cerrado o reemplazado. [CreateMasterPasswordPage]
+/// es la única subpantalla de verdad, a la que se llega con un push/pop
+/// normal porque tiene su propio botón de volver.
 class AuthGatePage extends StatefulWidget {
   const AuthGatePage({super.key});
 
@@ -50,9 +51,10 @@ class _AuthGatePageState extends State<AuthGatePage> with WidgetsBindingObserver
   bool _biometricAvailable = false;
   String? _lockScreenError;
 
-  /// Set the moment the app leaves the foreground, so [didChangeAppLifecycleState]
-  /// can tell on resume how long it was away — that's what "Bloqueo automático"
-  /// actually measures against. Cleared on resume.
+  /// Se fija en el momento en que la app deja el primer plano, para que
+  /// [didChangeAppLifecycleState] pueda saber al volver cuánto tiempo
+  /// estuvo fuera — es contra eso contra lo que mide de verdad el "Bloqueo
+  /// automático". Se limpia al volver.
   DateTime? _backgroundedAt;
 
   @override
@@ -68,18 +70,20 @@ class _AuthGatePageState extends State<AuthGatePage> with WidgetsBindingObserver
     super.dispose();
   }
 
-  /// "Bloquear al cerrar" and "Bloqueo automático" (Ajustes > SEGURIDAD) were
-  /// both persisted settings with nothing anywhere actually enforcing them —
-  /// this is that enforcement. Only matters while the vault is unlocked;
-  /// there's nothing to protect on the welcome/lock/loading screens.
+  /// "Bloquear al cerrar" y "Bloqueo automático" (Ajustes > SEGURIDAD) eran
+  /// dos ajustes que se guardaban sin que nada los aplicara en ningún sitio
+  /// — esto es esa aplicación. Solo importa mientras la bóveda está
+  /// desbloqueada; no hay nada que proteger en las pantallas de
+  /// bienvenida/bloqueo/carga.
   ///
-  /// "Bloquear al cerrar" locks the instant the app leaves the foreground,
-  /// regardless of how briefly - it doesn't wait to see if you come back.
-  /// "Bloqueo automático" is the gentler alternative for when that's off: it
-  /// only locks once you've actually been away for at least that long,
-  /// checked when you return rather than via a background timer (the vault's
-  /// contents aren't on screen while backgrounded either way, so checking on
-  /// resume - before anything is shown again - is enough).
+  /// "Bloquear al cerrar" bloquea en el instante en que la app deja el
+  /// primer plano, por breve que sea — no espera a ver si vuelves.
+  /// "Bloqueo automático" es la alternativa más suave para cuando eso está
+  /// desactivado: solo bloquea si de verdad has estado fuera al menos ese
+  /// tiempo, comprobado al volver en vez de con un temporizador en segundo
+  /// plano (el contenido de la bóveda no está en pantalla mientras está en
+  /// segundo plano de todas formas, así que comprobar al volver — antes de
+  /// mostrar nada de nuevo — es suficiente).
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (_screen != _Screen.vault) return;
@@ -109,22 +113,23 @@ class _AuthGatePageState extends State<AuthGatePage> with WidgetsBindingObserver
     if (!mounted) return;
     setState(() {
       _screen = initialized ? _Screen.lock : _Screen.welcome;
-      // Resolved separately, after the lock screen is already on screen —
-      // see _refreshBiometricAvailability's doc comment for why.
+      // Se resuelve aparte, cuando la pantalla de bloqueo ya está en
+      // pantalla — ver el comentario de _refreshBiometricAvailability.
       _biometricAvailable = false;
     });
     if (initialized) unawaited(_refreshBiometricAvailability());
   }
 
-  /// Whether to show the fingerprint icon on the lock screen — deliberately
-  /// checked *after* [_checkVaultStatus] has already put the lock screen on
-  /// screen, not as part of it. [BiometricService.isDeviceSupported] calls
-  /// into the platform's biometric APIs, and on at least one real device
-  /// that alone was enough to surface a native biometric prompt before
-  /// NexusKeys' own lock screen had even painted — asking the user to
-  /// authenticate before they had chosen to unlock at all. Running this
-  /// after the fact means the lock screen, not a biometric prompt, is
-  /// always what greets you first.
+  /// Si mostrar el icono de huella en la pantalla de bloqueo —
+  /// deliberadamente comprobado *después* de que [_checkVaultStatus] ya
+  /// haya puesto la pantalla de bloqueo en pantalla, no como parte de ella.
+  /// [BiometricService.isDeviceSupported] llama a las APIs biométricas de
+  /// la plataforma, y en al menos un dispositivo real eso solo bastaba para
+  /// sacar un prompt biométrico nativo antes de que la propia pantalla de
+  /// bloqueo de NexusKeys se hubiera pintado siquiera — pidiendo al usuario
+  /// autenticarse antes de que hubiera elegido desbloquear. Ejecutar esto a
+  /// posteriori significa que lo primero que te recibe siempre es la
+  /// pantalla de bloqueo, no un prompt biométrico.
   Future<void> _refreshBiometricAvailability() async {
     final available =
         _settings.current.biometricEnabled && await _biometricService.isDeviceSupported();
@@ -153,8 +158,8 @@ class _AuthGatePageState extends State<AuthGatePage> with WidgetsBindingObserver
         Navigator.of(context).pop();
         setState(() => _screen = _Screen.vault);
       case AuthFailure():
-        // setupMasterPassword only fails on unexpected storage errors —
-        // surface it rather than silently discarding it.
+        // setupMasterPassword solo falla por errores inesperados de
+        // almacenamiento — hazlo visible en vez de descartarlo en silencio.
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('No se pudo crear la bóveda. Inténtalo de nuevo.')),
         );
@@ -211,16 +216,17 @@ class _AuthGatePageState extends State<AuthGatePage> with WidgetsBindingObserver
       _screen = _Screen.lock;
       _lockScreenError = null;
     });
-    // Re-check in case biometric unlock was just enabled/disabled from
-    // Settings during this session — _biometricAvailable was only computed
-    // once, at cold start.
+    // Vuelve a comprobar por si el desbloqueo biométrico se acaba de
+    // activar/desactivar desde Ajustes durante esta sesión —
+    // _biometricAvailable solo se calculó una vez, en el arranque en frío.
     _checkVaultStatus();
   }
 
-  /// The vault (auth header + database file) was just erased from
-  /// Settings' "Eliminar bóveda permanentemente" — there's nothing left to
-  /// unlock, so this goes straight to [WelcomePage] rather than the lock
-  /// screen [_lockVault] would show.
+  /// La bóveda (cabecera de autenticación + archivo de base de datos) se
+  /// acaba de borrar desde el "Eliminar bóveda permanentemente" de Ajustes
+  /// — no queda nada que desbloquear, así que esto va directo a
+  /// [WelcomePage] en vez de a la pantalla de bloqueo que mostraría
+  /// [_lockVault].
   void _handleVaultDeleted() {
     _vaultSession.lock();
     setState(() {
@@ -236,9 +242,10 @@ class _AuthGatePageState extends State<AuthGatePage> with WidgetsBindingObserver
           showExportSection: false,
           onImportComplete: () {
             Navigator.of(context).pop();
-            // A vault now exists where there wasn't one — re-check rather
-            // than assuming .lock, in case the import itself failed to
-            // leave a well-formed auth header.
+            // Ahora existe una bóveda donde no la había — vuelve a
+            // comprobar en vez de asumir .lock, por si la propia
+            // importación no dejó una cabecera de autenticación bien
+            // formada.
             _checkVaultStatus();
           },
         ),

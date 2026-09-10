@@ -8,21 +8,23 @@ import '../../domain/entities/vault_item.dart';
 import '../../domain/entities/vault_item_type.dart';
 import '../../domain/repositories/vault_repository.dart';
 
-/// Create/edit form for a vault item — reproduces img/05_new_item.png for
-/// creation (the mockup's own fields are exactly [VaultItemType.password]'s
-/// — the only type it shows); there's no separate mockup for editing, so it
-/// reuses the same layout pre-filled, titled "Editar elemento". Deletion
-/// isn't reachable from here — img/04_item_details.png's "Eliminar" button
-/// is the only place that lives.
+/// Formulario de crear/editar un elemento de la bóveda — reproduce
+/// img/05_new_item.png para la creación (los campos del propio mockup son
+/// exactamente los de [VaultItemType.password], el único tipo que muestra);
+/// no hay un mockup aparte para editar, así que reutiliza el mismo layout
+/// pre-rellenado, titulado "Editar elemento". El borrado no es alcanzable
+/// desde aquí — el botón "Eliminar" de img/04_item_details.png es el único
+/// sitio donde vive.
 ///
-/// Which fields appear below "Tipo" changes with it: each [VaultItemType]
-/// has its own, genuinely different set (a card asks for its number and
-/// CVV, not a username) rather than one generic form that looks identical
-/// no matter what's selected.
+/// Los campos que aparecen bajo "Tipo" cambian con él: cada
+/// [VaultItemType] tiene su propio conjunto, genuinamente distinto (una
+/// tarjeta pide su número y su CVV, no un usuario) en vez de un formulario
+/// genérico idéntico se elija lo que se elija.
 class EditVaultItemPage extends StatefulWidget {
   const EditVaultItemPage({super.key, this.existingItem, this.onSave});
 
-  /// Null when creating a new item; the item being edited otherwise.
+  /// Null al crear un elemento nuevo; el elemento que se está editando en
+  /// caso contrario.
   final VaultItem? existingItem;
 
   final ValueChanged<VaultItem>? onSave;
@@ -56,8 +58,9 @@ class _EditVaultItemPageState extends State<EditVaultItemPage> {
 
   bool get _isEditing => widget.existingItem != null;
 
-  /// Every distinct tag already used across the vault, for the Etiquetas
-  /// autocomplete — sorted so suggestions appear in a stable order.
+  /// Todas las etiquetas distintas ya usadas en la bóveda, para el
+  /// autocompletado de Etiquetas — ordenadas para que las sugerencias
+  /// aparezcan en un orden estable.
   List<String> get _existingTags {
     final tags = <String>{};
     for (final item in _repository.currentItems) {
@@ -148,9 +151,9 @@ class _EditVaultItemPageState extends State<EditVaultItemPage> {
     final existing = widget.existingItem;
     final tags = _tags.text.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList();
 
-    // Only Contraseña and WiFi actually use username/password/url — clearing
-    // them for the other types keeps a type switch from leaving stale data
-    // behind in fields its own form no longer shows.
+    // Solo Contraseña y WiFi usan de verdad username/password/url —
+    // limpiarlos para el resto de tipos evita que un cambio de tipo deje
+    // datos rancios en campos que su propio formulario ya no muestra.
     final usesLoginFields = _type == VaultItemType.password;
     final usesPasswordField = _type == VaultItemType.password || _type == VaultItemType.wifi;
 
@@ -221,10 +224,10 @@ class _EditVaultItemPageState extends State<EditVaultItemPage> {
             const SizedBox(height: 16),
             Autocomplete<String>(
               optionsBuilder: (textEditingValue) {
-                // Suggest existing tags not already typed into the
-                // comma-separated field, matching on whatever's after the
-                // last comma so autocomplete still works while adding a
-                // second or third tag.
+                // Sugiere etiquetas existentes que no se hayan tecleado ya
+                // en el campo separado por comas, casando con lo que haya
+                // después de la última coma para que el autocompletado siga
+                // funcionando al añadir una segunda o tercera etiqueta.
                 final typed = textEditingValue.text;
                 final alreadyTyped = typed.split(',').map((t) => t.trim().toLowerCase()).toSet();
                 final currentFragment = typed.split(',').last.trim().toLowerCase();
@@ -236,10 +239,10 @@ class _EditVaultItemPageState extends State<EditVaultItemPage> {
                 );
               },
               fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
-                // Keep our own controller as the single source of truth —
-                // Autocomplete's internal one only drives the suggestion
-                // popup here, since the real field stays a plain
-                // comma-separated string the same as before.
+                // Mantén nuestro propio controller como única fuente de
+                // verdad — el interno de Autocomplete aquí solo alimenta el
+                // popup de sugerencias, ya que el campo real sigue siendo
+                // una cadena separada por comas normal igual que antes.
                 controller.text = _tags.text;
                 controller.addListener(() {
                   if (controller.text != _tags.text) _tags.text = controller.text;

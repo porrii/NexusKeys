@@ -5,21 +5,24 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../domain/entities/auth_config.dart';
 
-/// Persists the auth header (salt, Argon2id params, encrypted verifier) as
-/// a small JSON file in the app's documents directory.
+/// Guarda la cabecera de autenticación (salt, parámetros de Argon2id,
+/// verificador cifrado) como un pequeño archivo JSON en el directorio de
+/// documentos de la app.
 ///
-/// This file is *not* secret — its confidentiality doesn't matter, only its
-/// integrity under the derived key (enforced by AES-GCM's MAC). Keeping it
-/// as a plain, portable file (rather than in the OS keystore) means a
-/// vault can be moved to a new device and unlocked with the master
-/// password alone, per the app's offline-only, sync-free design.
+/// Este archivo *no* es secreto — su confidencialidad no importa, solo su
+/// integridad bajo la clave derivada (garantizada por el MAC de AES-GCM).
+/// Mantenerlo como un archivo plano y portable (en vez de en el keystore
+/// del SO) significa que una bóveda se puede mover a otro dispositivo y
+/// desbloquear solo con la contraseña maestra, acorde con el diseño de la
+/// app: sin conexión y sin sincronización.
 class AuthLocalDataSource {
   AuthLocalDataSource({this.overrideDirectory});
 
   static const _fileName = 'auth.json';
 
-  /// Set only by tests, to redirect the auth header to a temp directory
-  /// instead of the real app-support directory.
+  /// Solo lo fijan los tests, para redirigir la cabecera de autenticación a
+  /// un directorio temporal en vez del directorio real de soporte de la
+  /// app.
   final Directory? overrideDirectory;
 
   Future<File> _authFile() async {

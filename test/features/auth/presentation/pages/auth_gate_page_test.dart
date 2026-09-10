@@ -16,10 +16,11 @@ import 'package:nexuskeys/features/settings/domain/repositories/settings_reposit
 import 'package:nexuskeys/features/vault/di/vault_dependencies.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// AuthGatePage checks these to decide whether to offer the biometric
-/// unlock button; every test in this file leaves biometrics off the table
-/// (that flow is covered by biometric_prompt_page_test.dart and
-/// settings_page_test.dart) by reporting the device as unsupported.
+/// AuthGatePage comprueba esto para decidir si ofrecer el botón de
+/// desbloqueo biométrico; todos los tests de este archivo dejan la
+/// biometría fuera de juego (ese flujo lo cubren
+/// biometric_prompt_page_test.dart y settings_page_test.dart) informando
+/// del dispositivo como no compatible.
 class _FakeBiometricService implements BiometricService {
   @override
   Future<bool> isDeviceSupported() async => false;
@@ -45,11 +46,11 @@ class _FakeVaultKeyStore implements VaultKeyStore {
   bool get hasWarmedUpCipher => false;
 }
 
-/// Hand-written fake instead of a mocking framework — AuthRepository has
-/// only four methods and this keeps the test dependency-free. Its own
-/// correctness is covered separately by auth_repository_impl_test.dart;
-/// this fake only needs to be controllable enough to exercise AuthGatePage's
-/// navigation and error-mapping logic.
+/// Fake escrito a mano en vez de un framework de mocking — AuthRepository
+/// solo tiene cuatro métodos y así el test no arrastra dependencias. Su
+/// propia corrección la cubre aparte auth_repository_impl_test.dart; este
+/// fake solo necesita ser lo bastante controlable para ejercitar la
+/// lógica de navegación y de mapeo de errores de AuthGatePage.
 class FakeAuthRepository implements AuthRepository {
   bool vaultInitialized = false;
   String? configuredPassword;
@@ -109,16 +110,17 @@ void main() {
     sl.registerSingleton<SettingsRepository>(
       SettingsRepositoryImpl(preferences: await SharedPreferences.getInstance()),
     );
-    // VaultPage (shown after a successful unlock) and AuthGatePage's own
-    // post-unlock reload() both need a real VaultRepository — registered
-    // the same way production's setupServiceLocator() does.
+    // VaultPage (que se muestra tras un desbloqueo correcto) y el propio
+    // reload() post-desbloqueo de AuthGatePage necesitan un VaultRepository
+    // real — registrado igual que hace el setupServiceLocator() de
+    // producción.
     configureVaultDependencies(sl);
   });
 
   tearDown(() async {
-    // The vault database file is memory-mapped by the still-open SQLCipher
-    // connection; on Windows the temp dir can't be deleted until that
-    // handle is released.
+    // El archivo de base de datos de la bóveda está mapeado en memoria por
+    // la conexión SQLCipher aún abierta; en Windows el directorio temporal
+    // no se puede borrar hasta que se libere ese handle.
     sl<VaultSession>().lock();
     if (await tempDir.exists()) {
       await tempDir.delete(recursive: true);
@@ -191,10 +193,11 @@ void main() {
   });
 
   testWidgets('locking from the vault screen AppBar returns to the lock screen', (tester) async {
-    // Below kVaultWideBreakpoint — the default test surface is wide enough
-    // to render VaultPage's wide sidebar layout instead, whose lock
-    // control has no tooltip (see VaultSidebar) the way the mobile
-    // AppBar's icon does.
+    // Por debajo de kVaultWideBreakpoint — la superficie de test por
+    // defecto es lo bastante ancha como para renderizar en su lugar el
+    // layout de barra lateral ancha de VaultPage, cuyo control de bloqueo
+    // no tiene tooltip (ver VaultSidebar) como sí lo tiene el icono del
+    // AppBar de móvil.
     tester.view.physicalSize = const Size(400, 1400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);

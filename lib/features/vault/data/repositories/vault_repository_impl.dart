@@ -4,8 +4,9 @@ import '../../domain/entities/vault_item.dart';
 import '../../domain/repositories/vault_repository.dart';
 import '../datasources/vault_local_data_source.dart';
 
-/// See [VaultRepository]'s doc comment for why [currentItems]/[itemsStream]
-/// are split instead of one replaying Stream.
+/// Ver el comentario de [VaultRepository] para saber por qué
+/// [currentItems]/[itemsStream] están separados en vez de un único Stream
+/// que reproduce.
 class VaultRepositoryImpl implements VaultRepository {
   VaultRepositoryImpl({required VaultLocalDataSource dataSource}) : _local = dataSource {
     _refresh();

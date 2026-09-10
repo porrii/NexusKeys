@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
-/// Typography scale shared by every screen. The reference mockups use the
-/// platform default sans-serif (Roboto/Segoe UI), so no custom font family
-/// is bundled — this keeps the app lighter and avoids introducing a look
-/// that isn't in `/img`.
+/// Escala tipográfica común a todas las pantallas. Los mockups de
+/// referencia usan la sans-serif por defecto de la plataforma
+/// (Roboto/Segoe UI), así que no se incluye ninguna familia de fuente
+/// propia — así la app es más ligera y se evita introducir un aspecto que
+/// no esté en `/img`.
 abstract final class AppTextStyles {
   static const TextStyle appTitle = TextStyle(
     fontSize: 26,

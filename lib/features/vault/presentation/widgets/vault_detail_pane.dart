@@ -6,10 +6,11 @@ import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/vault_item.dart';
 import 'item_field_card.dart';
 
-/// The right-hand pane on wide layouts (img/13_tablet.png,
-/// img/14_windows.png) — the same fields [ItemDetailsPage] shows on
-/// mobile, laid out inline instead of behind its own Scaffold/AppBar, so
-/// the sidebar and item list stay visible while browsing details.
+/// El panel de la derecha en los layouts anchos (img/13_tablet.png,
+/// img/14_windows.png) — los mismos campos que [ItemDetailsPage] muestra
+/// en móvil, dispuestos en línea en vez de tras su propio Scaffold/AppBar,
+/// para que la barra lateral y la lista de elementos sigan visibles
+/// mientras se ojean los detalles.
 class VaultDetailPane extends StatelessWidget {
   const VaultDetailPane({
     required this.item,
@@ -19,8 +20,9 @@ class VaultDetailPane extends StatelessWidget {
     super.key,
   });
 
-  /// Null shows an empty placeholder — nothing selected yet, or the
-  /// selected item just left the list (e.g. moved to the trash).
+  /// Null muestra un placeholder vacío — todavía no hay nada seleccionado,
+  /// o el elemento seleccionado acaba de salir de la lista (p. ej. se movió
+  /// a la papelera).
   final VaultItem? item;
 
   final ValueChanged<bool>? onToggleFavorite;

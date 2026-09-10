@@ -21,10 +21,10 @@ class BiometricServiceImpl implements BiometricService {
     try {
       return await _localAuth.authenticate(localizedReason: reason, biometricOnly: true);
     } on LocalAuthException catch (error) {
-      // Every other code (cancelled, locked out, no biometrics enrolled,
-      // hardware unavailable, ...) is a "can't unlock this way right now"
-      // outcome that the biometric prompt screen already treats the same
-      // as a plain failed attempt.
+      // Cualquier otro código (cancelado, bloqueado por intentos, sin
+      // biometría registrada, hardware no disponible, ...) es un "ahora
+      // mismo no se puede desbloquear así" que la pantalla del prompt
+      // biométrico ya trata igual que un intento fallido normal.
       switch (error.code) {
         case LocalAuthExceptionCode.authInProgress:
         case LocalAuthExceptionCode.deviceError:

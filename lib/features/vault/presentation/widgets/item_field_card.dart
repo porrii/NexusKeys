@@ -5,11 +5,12 @@ import '../../../../core/widgets/password_strength_indicator.dart';
 import '../../domain/entities/vault_item.dart';
 import '../../domain/entities/vault_item_type.dart';
 
-/// The type-specific field cards for [item] — a card's number and CVV, an
-/// identity's document number, ... — built from [VaultItem.extraData].
-/// Shared between [ItemDetailsPage] and the wide layout's detail pane so
-/// both stay in sync as new types/fields are added, rather than
-/// maintaining the same switch twice.
+/// Las tarjetas de campo específicas de cada tipo para [item] — el número
+/// y el CVV de una tarjeta, el número de documento de una identidad, ... —
+/// construidas a partir de [VaultItem.extraData]. Compartidas entre
+/// [ItemDetailsPage] y el panel de detalle del layout ancho para que ambos
+/// se mantengan sincronizados al añadir tipos/campos nuevos, en vez de
+/// mantener el mismo switch dos veces.
 List<Widget> buildExtraDataFields({
   required BuildContext context,
   required VaultItem item,
@@ -53,10 +54,11 @@ List<Widget> buildExtraDataFields({
   return widgets;
 }
 
-/// A single labelled field row on the item details view — reused by both
-/// [ItemDetailsPage] (img/04_item_details.png, mobile) and the inline
-/// detail pane on wide layouts (img/13_tablet.png, img/14_windows.png),
-/// which show the exact same field cards without their own Scaffold/AppBar.
+/// Una única fila de campo etiquetada en la vista de detalles del elemento
+/// — reutilizada tanto por [ItemDetailsPage] (img/04_item_details.png,
+/// móvil) como por el panel de detalle en línea de los layouts anchos
+/// (img/13_tablet.png, img/14_windows.png), que muestran exactamente las
+/// mismas tarjetas de campo sin su propio Scaffold/AppBar.
 class ItemFieldCard extends StatelessWidget {
   const ItemFieldCard({required this.label, required this.child, this.icon, this.onCopy, super.key});
 
@@ -98,8 +100,9 @@ class ItemFieldCard extends StatelessWidget {
   }
 }
 
-/// A shorter, obscured field without the password-strength meter that
-/// makes sense for an actual password but not for e.g. a card's CVV.
+/// Un campo más corto y oculto, sin el medidor de fortaleza de contraseña
+/// que tiene sentido para una contraseña de verdad pero no para, p. ej.,
+/// el CVV de una tarjeta.
 class ItemMaskedFieldCard extends StatefulWidget {
   const ItemMaskedFieldCard({required this.label, required this.value, this.onCopy, super.key});
 
