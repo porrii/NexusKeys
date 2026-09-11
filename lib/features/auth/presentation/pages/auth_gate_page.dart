@@ -146,23 +146,34 @@ class _AuthGatePageState extends State<AuthGatePage> with WidgetsBindingObserver
   }
 
   Future<void> _submitNewMasterPassword(String password) async {
-    final result = await _authRepository.setupMasterPassword(password);
-    if (!mounted) return;
+    try {
+      final result = await _authRepository.setupMasterPassword(password);
+      if (!mounted) return;
 
-    switch (result) {
-      case AuthSuccess(:final vaultKey):
-        await _vaultSession.unlock(vaultKey);
-        wipe(vaultKey);
-        await sl<VaultRepository>().reload();
-        if (!mounted) return;
-        Navigator.of(context).pop();
-        setState(() => _screen = _Screen.vault);
-      case AuthFailure():
-        // setupMasterPassword solo falla por errores inesperados de
-        // almacenamiento — hazlo visible en vez de descartarlo en silencio.
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No se pudo crear la bóveda. Inténtalo de nuevo.')),
-        );
+      switch (result) {
+        case AuthSuccess(:final vaultKey):
+          await _vaultSession.unlock(vaultKey);
+          wipe(vaultKey);
+          await sl<VaultRepository>().reload();
+          if (!mounted) return;
+          Navigator.of(context).pop();
+          setState(() => _screen = _Screen.vault);
+        case AuthFailure():
+          // setupMasterPassword solo falla por errores inesperados de
+          // almacenamiento — hazlo visible en vez de descartarlo en silencio.
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No se pudo crear la bóveda. Inténtalo de nuevo.')),
+          );
+      }
+    } catch (_) {
+      // Cualquier excepción inesperada de por aquí (derivar la clave,
+      // abrir la base de datos, ...) tiene que acabar en un aviso, nunca
+      // dejar el botón "Crear bóveda" sin hacer nada para siempre — ver el
+      // mismo razonamiento en _handleUnlock.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo crear la bóveda. Inténtalo de nuevo.')),
+      );
     }
   }
 
@@ -171,29 +182,44 @@ class _AuthGatePageState extends State<AuthGatePage> with WidgetsBindingObserver
       _isBusy = true;
       _lockScreenError = null;
     });
-    final result = await _authRepository.verifyMasterPassword(password);
-    if (!mounted) return;
+    // Todo lo de aquí abajo va en un try/catch a propósito: un fallo real
+    // (un cuelgue de Argon2id rastreado hasta aquí, un error de E/S al
+    // abrir la base de datos, cualquier cosa inesperada) no debe dejar
+    // _isBusy en true para siempre — eso deja el botón "Desbloquear"
+    // mostrando el spinner sin parar nunca, sin ningún error visible ni
+    // forma de reintentar salvo cerrando la app. Da igual qué lance la
+    // excepción: siempre se recupera aquí.
+    try {
+      final result = await _authRepository.verifyMasterPassword(password);
+      if (!mounted) return;
 
-    switch (result) {
-      case AuthSuccess(:final vaultKey):
-        await _vaultSession.unlock(vaultKey);
-        wipe(vaultKey);
-        await sl<VaultRepository>().reload();
-        if (!mounted) return;
-        setState(() {
-          _isBusy = false;
-          _screen = _Screen.vault;
-        });
-      case AuthFailure(:final reason):
-        setState(() {
-          _isBusy = false;
-          _lockScreenError = switch (reason) {
-            AuthFailureReason.wrongPassword => 'Contraseña incorrecta',
-            AuthFailureReason.vaultNotInitialized => 'No hay ninguna bóveda configurada',
-            AuthFailureReason.corruptedAuthData =>
-              'Los datos de autenticación están dañados',
-          };
-        });
+      switch (result) {
+        case AuthSuccess(:final vaultKey):
+          await _vaultSession.unlock(vaultKey);
+          wipe(vaultKey);
+          await sl<VaultRepository>().reload();
+          if (!mounted) return;
+          setState(() {
+            _isBusy = false;
+            _screen = _Screen.vault;
+          });
+        case AuthFailure(:final reason):
+          setState(() {
+            _isBusy = false;
+            _lockScreenError = switch (reason) {
+              AuthFailureReason.wrongPassword => 'Contraseña incorrecta',
+              AuthFailureReason.vaultNotInitialized => 'No hay ninguna bóveda configurada',
+              AuthFailureReason.corruptedAuthData =>
+                'Los datos de autenticación están dañados',
+            };
+          });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isBusy = false;
+        _lockScreenError = 'No se pudo desbloquear la bóveda. Inténtalo de nuevo.';
+      });
     }
   }
 
@@ -203,11 +229,21 @@ class _AuthGatePageState extends State<AuthGatePage> with WidgetsBindingObserver
     );
     if (vaultKey == null || !mounted) return;
 
-    await _vaultSession.unlock(vaultKey);
-    wipe(vaultKey);
-    await sl<VaultRepository>().reload();
-    if (!mounted) return;
-    setState(() => _screen = _Screen.vault);
+    try {
+      await _vaultSession.unlock(vaultKey);
+      wipe(vaultKey);
+      await sl<VaultRepository>().reload();
+      if (!mounted) return;
+      setState(() => _screen = _Screen.vault);
+    } catch (_) {
+      // La huella ya se confirmó en BiometricPromptPage — lo que falla
+      // aquí es abrir la bóveda en sí (E/S, base de datos, ...). Sin este
+      // catch, la excepción se perdería en silencio y la pantalla de
+      // bloqueo se quedaría tal cual, sin ningún aviso de qué pasó.
+      wipe(vaultKey);
+      if (!mounted) return;
+      setState(() => _lockScreenError = 'No se pudo desbloquear la bóveda. Inténtalo de nuevo.');
+    }
   }
 
   void _lockVault() {

@@ -56,11 +56,19 @@ class FakeAuthRepository implements AuthRepository {
   String? configuredPassword;
   AuthFailureReason? nextFailureReason;
 
+  /// Simula el fallo real que motivó este archivo: una excepción
+  /// inesperada durante la derivación de la clave (rastreado hasta un
+  /// cuelgue real de Argon2id en Windows), en vez de un [AuthFailure]
+  /// normal y corriente.
+  bool throwOnVerify = false;
+  bool throwOnSetup = false;
+
   @override
   Future<bool> isVaultInitialized() async => vaultInitialized;
 
   @override
   Future<AuthResult> setupMasterPassword(String password) async {
+    if (throwOnSetup) throw StateError('fallo simulado de setupMasterPassword');
     configuredPassword = password;
     vaultInitialized = true;
     return AuthSuccess(Uint8List(32));
@@ -68,6 +76,7 @@ class FakeAuthRepository implements AuthRepository {
 
   @override
   Future<AuthResult> verifyMasterPassword(String password) async {
+    if (throwOnVerify) throw StateError('fallo simulado de verifyMasterPassword');
     if (nextFailureReason case final reason?) return AuthFailure(reason);
     if (!vaultInitialized) return const AuthFailure(AuthFailureReason.vaultNotInitialized);
     if (password != configuredPassword) return const AuthFailure(AuthFailureReason.wrongPassword);
@@ -176,6 +185,59 @@ void main() {
 
     expect(find.text('Contraseña incorrecta'), findsOneWidget);
     expect(find.text('Desbloquear bóveda'), findsOneWidget);
+  });
+
+  testWidgets(
+    'an unexpected exception while verifying recovers with an error instead of spinning forever',
+    (tester) async {
+      // Reproduce el bug real: un fallo de verifyMasterPassword que lanza
+      // en vez de devolver AuthFailure (p. ej. el cuelgue de Argon2id
+      // rastreado en Windows) no debe dejar el botón "Desbloquear"
+      // mostrando el spinner para siempre — tiene que recuperarse con un
+      // error visible y dejar reintentar.
+      fakeRepository.vaultInitialized = true;
+      fakeRepository.configuredPassword = 'the-real-password';
+      fakeRepository.throwOnVerify = true;
+
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'the-real-password');
+      await tester.tap(find.text('Desbloquear'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No se pudo desbloquear la bóveda. Inténtalo de nuevo.'), findsOneWidget);
+      // El botón vuelve a ser pulsable (isUnlocking:false) en vez de
+      // quedarse deshabilitado con el spinner.
+      final button = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
+      expect(button.onPressed, isNotNull);
+
+      // Y un reintento normal, sin el fallo, funciona.
+      fakeRepository.throwOnVerify = false;
+      await tester.tap(find.text('Desbloquear'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Buscar en la bóveda'), findsOneWidget);
+    },
+  );
+
+  testWidgets('an unexpected exception while creating a vault shows a SnackBar, not a stuck screen',
+      (tester) async {
+    fakeRepository.throwOnSetup = true;
+
+    await tester.pumpWidget(wrap());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Crear nueva bóveda'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'a-strong-password');
+    await tester.enterText(find.byType(TextField).last, 'a-strong-password');
+    await tester.tap(find.text('Crear bóveda'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No se pudo crear la bóveda. Inténtalo de nuevo.'), findsOneWidget);
+    // Sigue en el formulario de creación, no a medio camino de ningún sitio.
+    expect(find.text('Crear contraseña maestra'), findsOneWidget);
   });
 
   testWidgets('the correct password unlocks into the vault screen', (tester) async {

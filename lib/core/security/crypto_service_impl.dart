@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart' as crypto;
+import 'package:cryptography/dart.dart' show DartArgon2id;
 
 import 'argon2_params.dart';
 import 'crypto_service.dart';
@@ -21,11 +22,26 @@ class CryptoServiceImpl implements CryptoService {
     required Uint8List salt,
     required Argon2idParams params,
   }) async {
-    final algorithm = crypto.Argon2id(
+    // DartArgon2id en vez de crypto.Argon2id(...) (que en Windows/desktop
+    // usa por defecto su variante FFI y reparte el cálculo entre varios
+    // Isolate.spawn) — maxIsolates: 0 fuerza el camino sin isolates
+    // adicionales, calculando todo en el isolate que llama, con cesiones
+    // cooperativas periódicas (así la UI sigue respondiendo) en vez de
+    // paralelismo real. Un cuelgue real de desbloqueo se rastreó hasta ahí:
+    // el propio paquete impone un timeout de 10 s por segmento cuando un
+    // isolate ayudante no responde a tiempo, y esa excepción no se estaba
+    // capturando en ningún sitio de la cadena de desbloqueo — evitar del
+    // todo esos isolates es más robusto que solo capturar el error. Se
+    // verificó que la clave derivada es exactamente la misma con o sin
+    // isolates (el paralelismo es un detalle de la implementación, no
+    // afecta al resultado del KDF), y el tiempo de derivación no empeora
+    // de forma perceptible.
+    final algorithm = DartArgon2id(
       parallelism: params.parallelism,
       memory: params.memoryKiB,
       iterations: params.iterations,
       hashLength: 32,
+      maxIsolates: 0,
     );
     final secretKey = await algorithm.deriveKeyFromPassword(password: password, nonce: salt);
     return Uint8List.fromList(await secretKey.extractBytes());
