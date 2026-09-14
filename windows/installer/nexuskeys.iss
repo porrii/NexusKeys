@@ -27,7 +27,7 @@
 ; cualquier riesgo de que el nombre salga con caracteres corruptos en el
 ; instalador o en "Aplicaciones y caracteristicas".
 #define MyAppName "NexusKeys"
-#define MyAppVersion "1.2.1"
+#define MyAppVersion "1.2.2"
 #define MyAppPublisher "Ivan Bezanilla Lopez"
 #define MyAppExeName "nexuskeys.exe"
 #define MyAppIcoName "app_icon.ico"

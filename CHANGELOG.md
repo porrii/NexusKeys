@@ -4,6 +4,20 @@ Todos los cambios relevantes de NexusKeys se documentan aquí. El formato se
 basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/), y el
 proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.2.2] - 2026-09-14
+
+### Corregido
+
+- **Desbloquear la bóveda podía quedarse colgado para siempre**, mostrando el
+  spinner del botón "Desbloquear" sin llegar nunca a un resultado ni a un
+  error — reproducido en Windows. La causa: en escritorio, la derivación de
+  la clave (Argon2id) reparte el cálculo entre varios procesos auxiliares
+  internos, y si uno no respondía a tiempo, la excepción resultante no se
+  capturaba en ningún punto de la cadena de desbloqueo. Ahora la derivación
+  evita ese mecanismo por completo, y cualquier fallo inesperado durante el
+  desbloqueo (este u otro futuro) se convierte en un mensaje de error visible
+  en vez de dejar la app colgada.
+
 ## [1.2.1] - 2026-09-10
 
 Primera release de Windows, más correcciones encontradas al probar las builds
@@ -94,6 +108,7 @@ exportación / importación cifrada. Layout adaptable —compacto en móvil, bar
 lateral + lista + detalle en tablets y Windows— con navegación inferior
 persistente en móvil.
 
+[1.2.2]: https://github.com/porrii/NexusKeys/releases/tag/v1.2.2
 [1.2.1]: https://github.com/porrii/NexusKeys/releases/tag/v1.2.1
 [1.2.0]: https://github.com/porrii/NexusKeys/releases/tag/v1.2.0
 [1.1.1]: https://github.com/porrii/NexusKeys/releases/tag/v1.1.1
