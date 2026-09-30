@@ -4,7 +4,7 @@ Todos los cambios relevantes de NexusKeys se documentan aquí. El formato se
 basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/), y el
 proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
-## [1.2.2] - 2026-09-14
+## [1.2.2] - 2026-09-30
 
 ### Añadido
 
