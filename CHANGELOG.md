@@ -6,6 +6,19 @@ proyecto sigue el [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [1.2.2] - 2026-09-14
 
+### Añadido
+
+- **`compilar.bat`** (Windows) y **`compilar.sh`** (Linux, solo Android), en
+  la raíz del repositorio, sustituyen a la antigua carpeta `installation/`.
+  Comprueban que la máquina tiene lo necesario para la plataforma pedida
+  (`--android` o `--windows`, nunca exigen ambas a la vez) y, si falta algo,
+  avisan de todo lo que falta de una vez —con la URL de dónde conseguirlo
+  cada uno— en vez de pararse en el primer hueco. No instalan nada por sí
+  mismos: cada herramienta la instala quien lo ejecute, donde prefiera. Si
+  todo está en orden, compilan con la salida de `flutter`/`iscc` en directo y
+  dejan el resultado ya nombrado con la versión en `dist/android/` /
+  `dist/windows/`.
+
 ### Corregido
 
 - **Desbloquear la bóveda podía quedarse colgado para siempre**, mostrando el

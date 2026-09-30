@@ -93,10 +93,25 @@ La build cifrada de SQLite se descarga automáticamente mediante los build
 hooks de Dart (ver la sección `hooks:` en `pubspec.yaml`): no hace falta
 ninguna configuración nativa aparte.
 
-Para preparar una máquina de compilación desde cero (JDK + Android SDK para
-Android, Visual Studio Build Tools para Windows), consulta
-[`installation/`](installation/): tiene guías `SETUP.md` por plataforma y
-scripts que lo automatizan.
+Para compilar sin tener que hacerlo todo a mano, usa
+[`compilar.bat`](compilar.bat) (Windows) o [`compilar.sh`](compilar.sh)
+(Linux, solo Android — Windows no se puede compilar de forma cruzada) desde
+la raíz del repositorio:
+
+```
+compilar.bat --android
+compilar.bat --windows --instalador
+
+./compilar.sh --android
+```
+
+Antes de compilar comprueba que la máquina tiene lo necesario para esa
+plataforma (JDK 17 + Android SDK para `--android`, Visual Studio Build Tools
+para `--windows`) y, si falta algo, avisa de todo lo que falta a la vez —con
+una URL para conseguir cada cosa— en vez de pararse en el primer hueco. Si
+todo está en orden, compila con la salida de `flutter`/`iscc` en directo y
+deja el resultado en `dist/android/` o `dist/windows/`. Ejecuta `--ayuda`
+para ver el resto de opciones (`--limpio`, `--debug`, `--instalador`...).
 
 ### Tests
 
@@ -105,6 +120,18 @@ flutter test
 ```
 
 ### Generar los artefactos de release
+
+```
+compilar.bat --android
+compilar.bat --windows --instalador
+```
+
+Deja el APK, el portable (zip) y el instalador (si se pidió) ya nombrados con
+la versión en `dist\android\` / `dist\windows\`. Antes de generar una
+release, sube la versión tanto en `pubspec.yaml` como en
+`windows/installer/nexuskeys.iss`.
+
+Si prefieres compilar a mano en vez de usar el script:
 
 ```bash
 # Android
@@ -116,9 +143,7 @@ iscc windows/installer/nexuskeys.iss  # -> windows/installer/Output/NexusKeys-Se
 ```
 
 El zip portable de Windows es simplemente el contenido de
-`build/windows/x64/runner/Release/` comprimido tal cual. Antes de generar una
-release, sube la versión tanto en `pubspec.yaml` como en
-`windows/installer/nexuskeys.iss`.
+`build/windows/x64/runner/Release/` comprimido tal cual.
 
 ## Estructura del proyecto
 
